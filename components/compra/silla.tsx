@@ -1,0 +1,80 @@
+"use client";
+
+import { memo } from "react";
+import type { EstadoAsiento } from "@/lib/tipos";
+
+type Props = {
+  id: number;
+  mesa: number;
+  silla: number;
+  estado: EstadoAsiento;
+  elegida: boolean;
+  /** true cuando ya se llegó al tope de sillas y esta no está elegida */
+  bloqueada: boolean;
+  /** El plano de escritorio usa chips chicos sin número; el celular, botones grandes. */
+  tamano: "chico" | "grande";
+  /** Si entra en el recorrido del tabulador. Ver el comentario en mesa.tsx. */
+  tabuladle?: boolean;
+  onElegir: (id: number) => void;
+};
+
+/**
+ * Una silla del plano.
+ *
+ * Los tres estados se distinguen por luminosidad, no por tono: ocupada oscura,
+ * libre media, elegida la mas clara y la unica con el laton. Encima la ocupada
+ * lleva `rayada`. Son tres canales (luz, tono, textura) para que funcione con
+ * daltonismo rojo-verde.
+ *
+ * Todas llevan borde: es el borde el que cumple el 3:1 de contraste no-textual
+ * contra el fondo del plano, lo que deja libertad para que los rellenos se
+ * diferencien entre si.
+ */
+function SillaBase({
+  id,
+  mesa,
+  silla,
+  estado,
+  elegida,
+  bloqueada,
+  tamano,
+  tabuladle = true,
+  onElegir,
+}: Props) {
+  const tomada = estado !== "DISPONIBLE";
+  const grande = tamano === "grande";
+
+  const etiqueta = `Mesa ${mesa}, silla ${silla}, ${
+    tomada ? "ocupada" : elegida ? "elegida" : "libre"
+  }`;
+
+  return (
+    <button
+      type="button"
+      onClick={() => onElegir(id)}
+      disabled={tomada || bloqueada}
+      tabIndex={tabuladle ? 0 : -1}
+      aria-pressed={elegida}
+      aria-label={etiqueta}
+      title={etiqueta}
+      className={[
+        "relative rounded-[2px] border font-medium tabular",
+        "transition-[transform,background-color,border-color] duration-150 ease-[var(--ease-salida)]",
+        grande
+          ? "flex size-11 items-center justify-center text-sm"
+          : "h-3.5 w-5",
+        tomada
+          ? "rayada cursor-not-allowed border-line bg-silla-tomada text-ink/60"
+          : elegida
+            ? "border-brass-light bg-silla-elegida text-carbon shadow-[0_0_0_1px_var(--color-carbon)_inset]"
+            : bloqueada
+              ? "cursor-not-allowed border-line bg-silla-libre/30 text-ink/40"
+              : "border-line-strong bg-silla-libre text-carbon hover:z-[var(--z-plano)] hover:scale-125 hover:border-brass hover:bg-brass",
+      ].join(" ")}
+    >
+      {grande ? (elegida ? "✓" : silla) : null}
+    </button>
+  );
+}
+
+export const Silla = memo(SillaBase);
