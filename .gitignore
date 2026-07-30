@@ -42,3 +42,10 @@ next-env.d.ts
 
 # claude code (config personal por maquina; .mcp.json si se comparte)
 .claude/settings.local.json
+# skills de terceros: se instalan, no se versionan con el proyecto
+.claude/skills/
+.claude/agents/
+
+# fuentes de diseño sin comprimir (logos originales, exportes). Pesan de mas
+# para el repo; lo que la web usa vive en public/
+/design/
