@@ -10,18 +10,24 @@ const PASOS = ["Elegir sillas", "Tus datos", "Pagar"] as const;
 export function Pasos({ actual }: { actual: 1 | 2 | 3 }) {
   return (
     <nav aria-label="Progreso de la compra">
-      <p className="dato mb-3 sm:hidden">
+      <p className="dato mb-3 text-center sm:hidden">
         Paso {actual} de 3 · {PASOS[actual - 1]}
       </p>
 
-      <ol className="flex items-center gap-2 sm:gap-3">
+      {/* El ultimo paso no tiene conectora, asi que sin `last:flex-none` su
+          tercio queda vacio a la derecha y toda la linea se recuesta a la
+          izquierda del contenedor. */}
+      <ol className="mx-auto flex max-w-xl items-center gap-2 sm:gap-3">
         {PASOS.map((nombre, i) => {
           const n = i + 1;
           const hecho = n < actual;
           const aqui = n === actual;
 
           return (
-            <li key={nombre} className="flex flex-1 items-center gap-2 sm:gap-3">
+            <li
+              key={nombre}
+              className="flex flex-1 items-center gap-2 last:flex-none sm:gap-3"
+            >
               <div className="flex min-w-0 items-center gap-2">
                 <span
                   aria-hidden

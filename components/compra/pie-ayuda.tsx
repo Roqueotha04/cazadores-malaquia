@@ -19,10 +19,13 @@ export function PieAyuda() {
           href={WHATSAPP}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex min-h-[44px] items-center gap-2 text-sm font-medium text-ink transition-colors duration-200 hover:text-brass"
+          className="group inline-flex min-h-[44px] items-center gap-2 text-sm font-medium text-ink transition-colors duration-200 ease-[var(--ease-salida)] hover:text-brass"
         >
           WhatsApp 2923 50-4014
-          <span aria-hidden className="text-brass">
+          <span
+            aria-hidden
+            className="text-brass transition-transform duration-200 ease-[var(--ease-salida)] group-hover:translate-x-1"
+          >
             →
           </span>
         </a>

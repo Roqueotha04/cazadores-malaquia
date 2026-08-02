@@ -1,5 +1,6 @@
 import { MapaSalon } from "@/components/compra/mapa-salon";
 import { Pasos } from "@/components/ui/pasos";
+import { COLCHON_PAGO_MIN } from "@/lib/constantes";
 import { obtenerMapa } from "@/lib/consultas";
 
 /** "1,2,3" → [1, 2, 3], descartando cualquier cosa que no sea un id. */
@@ -31,6 +32,11 @@ export default async function Comprar(props: PageProps<"/comprar">) {
     0,
   );
 
+  const total = mapa.mesas.reduce((suma, m) => suma + m.asientos.length, 0);
+
+  // Un minuto menos del real: ver lib/constantes.ts.
+  const minutos = mapa.evento.minutosReserva - COLCHON_PAGO_MIN;
+
   return (
     /* pb generoso: en el celular la barra fija de abajo tapa contenido. */
     <div className="mx-auto w-full max-w-6xl px-5 py-8 pb-32 lg:pb-16">
@@ -41,10 +47,10 @@ export default async function Comprar(props: PageProps<"/comprar">) {
         <p className="mt-3 max-w-xl text-lg text-ink-soft">
           Tocá las sillas que querés en el plano. Podés llevar hasta{" "}
           {mapa.evento.maxAsientosPorCompra} por compra, y te las guardamos{" "}
-          {mapa.evento.minutosReserva} minutos mientras completás tus datos.
+          {minutos} minutos mientras completás tus datos.
         </p>
         <p className="mt-3 text-sm text-ink-faint tabular">
-          {libres} sillas libres de 730
+          {libres} sillas libres de {total}
         </p>
       </header>
 

@@ -204,7 +204,32 @@ POST /api/reservas                   → crea la compra (5.1). Devuelve el token
 POST /api/reservas/{token}/cancelar  → cancela (5.4)
 POST /api/pagos/preference           → crea la preference de MP, devuelve la URL del checkout
 POST /api/webhooks/mercadopago       → confirma el pago (5.2)
+POST /api/contacto                   → consulta desde la landing (7.1). TODAVÍA NO EXISTE
 ```
+
+### 7.1 `POST /api/contacto`
+
+El formulario de contacto de la landing. Cuerpo:
+
+```json
+{ "nombre": "…", "apellido": "…", "celular": "2923504014", "motivo": "…" }
+```
+
+El celular llega **normalizado a 10 dígitos** (sin +54, sin 0, sin 15): lo hace
+`celularSchema` en [`lib/validacion.ts`](lib/validacion.ts), el mismo que usa la compra.
+`motivo` viene entre 10 y 600 caracteres. Responde 2xx con cuerpo vacío, o el sobre de
+error habitual (`{ error }` / `{ mensaje }`).
+
+Qué hace con eso el backend queda a su criterio (guardar la consulta, mandar un mail, o
+las dos). El frontend sólo necesita saber si salió.
+
+**Este endpoint todavía no existe.** Hasta que se implemente, en producción el submit
+devuelve el error de conexión que ya maneja `enviar()`; sin `API_URL` en el entorno el
+formulario responde OK y se puede probar entero.
+
+**Es el único endpoint público sin fricción del sistema** — no pide token ni pasa por el
+plano. Necesita rate limit por IP (algo como 5 por hora alcanza) o un honeypot, o se
+llena de spam el primer fin de semana.
 
 **Admin** (autenticado) y **escáner**:
 
@@ -255,6 +280,7 @@ GET  /api/reservas/{token}/entradas → Entrada[]          (vacío si no se pag�
 POST /api/reservas                  → { token }
 POST /api/reservas/{token}/cancelar → 200
 POST /api/pagos/preference          → { url }   ← a dónde mandar al comprador
+POST /api/contacto                  → 200       ← ver 7.1, todavía no existe
 ```
 
 Los tipos exactos están en [`lib/tipos.ts`](lib/tipos.ts). Supuestos del contrato:

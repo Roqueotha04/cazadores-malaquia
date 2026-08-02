@@ -6,6 +6,7 @@ import { Mesa } from "./mesa";
 import { GrillaMesas, DetalleMesa } from "./vista-celular";
 import { ResumenSeleccion } from "./resumen-seleccion";
 import { Boton } from "@/components/ui/boton";
+import { COLCHON_PAGO_MIN } from "@/lib/constantes";
 import { precio } from "@/lib/formato";
 import type { AsientoElegido, Mapa } from "@/lib/tipos";
 
@@ -32,7 +33,7 @@ export function MapaSalon({
     const mapaIds = new Map<number, AsientoElegido>();
     for (const mesa of mapa.mesas) {
       for (const a of mesa.asientos) {
-        mapaIds.set(a.id, { id: a.id, mesa: mesa.numero, silla: a.posicion });
+        mapaIds.set(a.id, { id: a.id, mesa: mesa.numero, silla: a.numero });
       }
     }
     return mapaIds;
@@ -89,14 +90,24 @@ export function MapaSalon({
   const mesaDetalle = mapa.mesas.find((m) => m.numero === mesaAbierta);
 
   return (
-    <div className="grid gap-8 lg:grid-cols-[1fr_20rem] lg:items-start">
-      <div>
-        <Referencias />
+    /* Filas explicitas: la leyenda arriba de todo, y el plano y la ficha
+       arrancando los dos en la fila 2, a la misma altura. `items-start` se
+       queda — es lo que deja al aside encogerse a su contenido y le da lugar
+       para deslizarse dentro de su area de grilla, que es lo que hace que el
+       sticky funcione. */
+    <div className="grid gap-5 lg:grid-cols-[1fr_20rem] lg:grid-rows-[auto_1fr] lg:items-start lg:gap-x-8 lg:gap-y-5">
+      <Referencias />
 
+      <div className="lg:col-start-1 lg:row-start-2">
         {/* Escritorio: el salón entero */}
-        <div className="veteada mt-5 hidden overflow-x-auto rounded-sm border border-line bg-surface-sunken p-6 lg:block">
+        <div className="veteada hidden overflow-x-auto rounded-sm border border-line bg-surface-sunken p-6 lg:block">
           <div className="min-w-3xl">
-            <Hito>Escenario</Hito>
+            {/* Los baños flanquean el escenario, como en el salón real. */}
+            <div className="flex items-stretch gap-3">
+              <Bano>Baño mujeres</Bano>
+              <Hito className="flex-1">Escenario</Hito>
+              <Bano>Baño hombres</Bano>
+            </div>
 
             <div className="mt-5 flex justify-center gap-3">
               {mapa.mesas
@@ -133,7 +144,7 @@ export function MapaSalon({
         </div>
 
         {/* Celular: elegir mesa, después silla */}
-        <div className="veteada mt-5 rounded-sm border border-line bg-surface-sunken p-5 lg:hidden">
+        <div className="veteada rounded-sm border border-line bg-surface-sunken p-5 lg:hidden">
           {mesaDetalle ? (
             <DetalleMesa
               mesa={mesaDetalle}
@@ -146,7 +157,8 @@ export function MapaSalon({
             <>
               <h2 className="text-ink">Elegí tu mesa</h2>
               <p className="mt-1.5 pb-5 text-sm text-ink-soft">
-                El escenario está del lado de las mesas 1 a 7.
+                El escenario está del lado de las mesas 1 a 7, con los baños a
+                los costados.
               </p>
               <GrillaMesas
                 mesas={mapa.mesas}
@@ -168,11 +180,12 @@ export function MapaSalon({
       {/* En el celular el resumen queda debajo del plano (ahí es donde se
           quitan sillas de a una); en escritorio va fijo al costado mientras se
           recorre el salón. La barra de abajo es un atajo, no un reemplazo. */}
-      <aside className="lg:sticky lg:top-24">
+      <aside className="lg:col-start-2 lg:row-start-2 lg:sticky lg:top-24">
         <ResumenSeleccion
           elegidos={detalle}
           precioCentavos={mapa.evento.precioCentavos}
           tope={tope}
+          minutos={mapa.evento.minutosReserva - COLCHON_PAGO_MIN}
           ventasAbiertas={mapa.evento.ventasAbiertas}
           enviando={navegando}
           onQuitar={alternar}
@@ -207,10 +220,27 @@ export function MapaSalon({
   );
 }
 
-/** Escenario / Entrada: los dos puntos de referencia del salón real. */
-function Hito({ children }: { children: React.ReactNode }) {
+/** Escenario / Entrada: los puntos de referencia del salón real. */
+function Hito({
+  children,
+  className = "",
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) {
   return (
-    <p className="dato rounded-sm border border-dashed border-line py-2 text-center">
+    <p
+      className={`dato rounded-sm border border-dashed border-line py-2 text-center ${className}`}
+    >
+      {children}
+    </p>
+  );
+}
+
+/** Mismo lenguaje que el Hito, pero angosto: van a los costados del escenario. */
+function Bano({ children }: { children: React.ReactNode }) {
+  return (
+    <p className="dato flex w-28 shrink-0 items-center justify-center rounded-sm border border-dashed border-line px-2 text-center leading-tight">
       {children}
     </p>
   );

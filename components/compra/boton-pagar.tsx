@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { Boton } from "@/components/ui/boton";
 import { crearPreferencia } from "@/lib/acciones/pago";
-import { cancelarReserva } from "@/lib/acciones/compra";
+import { cancelarOrden } from "@/lib/acciones/compra";
 
 /**
  * Manda al comprador a pagar.
@@ -26,7 +26,7 @@ export function BotonPagar({ token }: { token: string }) {
 
       // El destino es de otro dominio, asi que no va por el router de Next.
       // Sin replace: que el "atras" del navegador vuelva a la reserva.
-      window.location.href = resultado.datos.url;
+      window.location.href = resultado.datos.initPoint;
     });
   }
 
@@ -44,7 +44,7 @@ export function BotonPagar({ token }: { token: string }) {
 
         <Boton
           tono="fantasma"
-          onClick={() => empezar(() => cancelarReserva(token))}
+          onClick={() => empezar(() => cancelarOrden(token))}
           disabled={procesando}
         >
           Cancelar y elegir otras

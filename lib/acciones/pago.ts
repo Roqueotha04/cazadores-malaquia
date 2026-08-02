@@ -1,54 +1,41 @@
 "use server";
 
-import { enviar, SIN_BACKEND } from "../api";
+import { enviar } from "../api";
 import type { Resultado } from "../tipos";
 
 /**
- * Arranca el cobro: le pide al backend a dónde tiene que ir el comprador y
- * devuelve esa URL.
+ * Mercado Pago del otro lado: el SDK del backend espera hasta 20s por intento y
+ * reintenta. Cortar a los 8s seria mostrarle un error a alguien que solo tenia
+ * que esperar.
+ */
+const TIMEOUT_MS = 30_000;
+
+/**
+ * Arranca el cobro: abre un intento y devuelve el link de Checkout Pro.
  *
- * Confirmar el pago ya no es asunto del frontend. Antes había acá un
- * `confirmarPago(token)` que aprobaba la compra, y era un agujero: cualquiera
- * con un token se emitía las entradas gratis. Ahora la aprobación la dispara
- * Mercado Pago contra el webhook del backend, que es el único que puede
- * decidirlo.
+ * Confirmar el pago no es asunto del frontend. La aprobación la trae el webhook
+ * del backend, o la descubre `/reconciliar` al volver del checkout. Este botón
+ * no aprueba nada, sólo lleva.
  *
- * CONTRATO A CONFIRMAR con el .md del backend: se asume que este endpoint
- * devuelve `{ url }` con el destino del comprador. Mientras Mercado Pago no
- * esté conectado, el backend puede devolver ahí la URL de su pago simulado: el
- * frontend no necesita enterarse.
+ * Se puede llamar más de una vez sobre la misma orden: si un intento fue
+ * rechazado, las butacas siguen reservadas y el comprador puede reintentar
+ * mientras no venza.
  */
 export async function crearPreferencia(
   token: string,
-): Promise<Resultado<{ url: string }>> {
-  if (SIN_BACKEND) {
-    // Con fixtures el pago se da por hecho, pero se vuelve por la misma pantalla
-    // de retorno que va a usar Mercado Pago, para que el camino real quede
-    // recorrido. El sufijo hace que la reserva se lea como PAGADA.
-    //
-    // Los otros estados de esa pantalla se prueban a mano, con un token que no
-    // lleve el sufijo:
-    //   /compra/resultado?token=abc&status=approved  → espera activa
-    //   /compra/resultado?token=abc&status=pending   → pago offline
-    //   /compra/resultado?token=abc&status=rejected  → rechazado
-    return {
-      ok: true,
-      datos: {
-        url: `/compra/resultado?token=${encodeURIComponent(`${token}-pagada`)}&status=approved`,
-      },
-    };
-  }
-
-  const resultado = await enviar<{ url: string }>("/api/pagos/preference", {
-    token,
-  });
+): Promise<Resultado<{ initPoint: string }>> {
+  const resultado = await enviar<{
+    token: string;
+    montoCentavos: number;
+    initPoint: string;
+  }>(`/api/ordenes/${encodeURIComponent(token)}/pagar`, {}, { timeoutMs: TIMEOUT_MS });
 
   if (!resultado.ok) return { ok: false, error: resultado.error };
 
-  if (!resultado.datos?.url) {
-    console.error("crearPreferencia: el backend no devolvio una url");
+  if (!resultado.datos?.initPoint) {
+    console.error("crearPreferencia: el backend no devolvio un initPoint");
     return { ok: false, error: "No pudimos abrir el pago. Probá de nuevo." };
   }
 
-  return { ok: true, datos: resultado.datos };
+  return { ok: true, datos: { initPoint: resultado.datos.initPoint } };
 }

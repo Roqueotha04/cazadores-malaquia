@@ -18,13 +18,17 @@ type Medida = "base" | "chico";
 
 const base =
   "inline-flex items-center justify-center gap-2 rounded-sm font-semibold " +
-  "transition-[background-color,border-color,color,transform] duration-200 " +
-  "ease-[var(--ease-salida)] active:translate-y-px " +
+  "transition-[background-color,border-color,color,transform,box-shadow] " +
+  "duration-200 ease-[var(--ease-salida)] hover:-translate-y-px " +
+  "active:translate-y-px " +
   "disabled:pointer-events-none disabled:opacity-45 aria-disabled:opacity-45";
 
 const tonos: Record<Tono, string> = {
   // El laton es el unico acento del sistema: solo la accion principal lo usa.
-  principal: "bg-brass text-carbon hover:bg-brass-light",
+  // El halo es el mismo laton a media luz: levanta el boton del fondo sin
+  // meter un color nuevo.
+  principal:
+    "bg-brass text-carbon hover:bg-brass-light hover:shadow-[0_8px_24px_-10px_var(--color-brass)]",
   secundario:
     "border border-line-strong text-ink hover:border-brass hover:bg-surface-raised",
   fantasma: "text-ink-soft hover:text-ink hover:bg-surface-raised",

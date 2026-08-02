@@ -8,6 +8,7 @@ export function ResumenSeleccion({
   elegidos,
   precioCentavos,
   tope,
+  minutos,
   ventasAbiertas,
   enviando,
   onQuitar,
@@ -16,6 +17,8 @@ export function ResumenSeleccion({
   elegidos: AsientoElegido[];
   precioCentavos: number;
   tope: number;
+  /** Cuánto se guardan las sillas, ya con el colchón del pago descontado. */
+  minutos: number;
   ventasAbiertas: boolean;
   enviando: boolean;
   onQuitar: (id: number) => void;
@@ -48,7 +51,7 @@ export function ResumenSeleccion({
             </p>
             <p className="mt-2 text-sm text-ink-faint">
               Tocá las sillas libres del plano. Podés llevar hasta {tope} y las
-              guardamos 30 minutos mientras completás tus datos.
+              guardamos {minutos} minutos mientras completás tus datos.
             </p>
           </div>
         ) : (
@@ -64,7 +67,7 @@ export function ResumenSeleccion({
                 <button
                   type="button"
                   onClick={() => onQuitar(a.id)}
-                  className="min-h-[44px] px-3 text-sm text-ink-faint transition-colors duration-200 hover:text-error"
+                  className="min-h-[44px] rounded-sm px-3 text-sm text-ink-faint transition-colors duration-200 ease-[var(--ease-salida)] hover:bg-error/10 hover:text-error"
                   aria-label={`Quitar ${ubicacion(a.mesa, a.silla)}`}
                 >
                   Quitar

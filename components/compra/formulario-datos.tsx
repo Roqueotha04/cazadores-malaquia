@@ -1,8 +1,10 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { Boton } from "@/components/ui/boton";
+// Se renombra: acá `campo` ya es cada entrada de CAMPOS.
+import { campo as campoClases } from "@/components/ui/clases";
 import { enviarCompra, type EstadoFormulario } from "@/lib/acciones/compra";
 
 const CAMPOS = [
@@ -51,12 +53,22 @@ export function FormularioDatos({ asientos }: { asientos: number[] }) {
     {},
   );
 
+  const alerta = useRef<HTMLDivElement>(null);
+
+  // El error general vive arriba de todo: si la persona estaba en el último
+  // campo, sin esto no lo ve nunca.
+  useEffect(() => {
+    alerta.current?.focus();
+  }, [estado.error]);
+
   return (
     <form action={accion} noValidate>
       <input type="hidden" name="asientos" value={asientos.join(",")} />
 
       {estado.error && (
         <div
+          ref={alerta}
+          tabIndex={-1}
           role="alert"
           className="mb-7 rounded-sm border border-error/50 bg-error/10 px-4 py-3.5"
         >
@@ -96,15 +108,13 @@ export function FormularioDatos({ asientos }: { asientos: number[] }) {
                 inputMode={campo.inputMode}
                 autoComplete={campo.autoComplete}
                 required
+                /* React 19 resetea el formulario cuando la action termina,
+                   aunque haya devuelto errores. Los valores vuelven del estado
+                   para que nadie tenga que reescribir todo por un dígito. */
+                defaultValue={estado.valores?.[campo.nombre]}
                 aria-invalid={!!error}
                 aria-describedby={campo.ayuda || error ? idAyuda : undefined}
-                /* min-h de 52px y text-base: en iOS un input de menos de 16px
-                   hace que el navegador haga zoom solo al enfocarlo. */
-                className={`mt-2 min-h-[52px] w-full rounded-sm border bg-surface-sunken px-3.5 py-3 text-base text-ink transition-colors duration-200 placeholder:text-ink-faint ${
-                  error
-                    ? "border-error"
-                    : "border-line-strong hover:border-ink-faint focus:border-brass"
-                }`}
+                className={campoClases(!!error)}
               />
 
               {(error || campo.ayuda) && (

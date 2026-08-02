@@ -18,17 +18,17 @@ npm run dev
 
 Abrir <http://localhost:3000>.
 
-**No hace falta backend para trabajar el frontend.** Si no hay `API_URL` en el entorno, la
-app responde con los datos de ejemplo de `lib/fixtures.ts`, que reproducen la carga real del
-salón. Para conectar el backend:
+**Hace falta el backend arriba.** Ya no hay datos de ejemplo: todo sale de la API, que es
+la única fuente de la verdad. La única variable de entorno es su URL:
 
 ```bash
 # .env.local
-API_URL=http://localhost:PUERTO
+API_URL=http://localhost:8080
 ```
 
-Los tokens de prueba para ver las tres pantallas de una reserva (activa, pagada, vencida)
-están documentados al principio de `lib/fixtures.ts`.
+Sin `API_URL` el build corre igual —ninguna pantalla de datos se prerenderiza— pero al
+abrirlas fallan. El contrato de la API está en
+[.claude/api-frontend.md](.claude/api-frontend.md).
 
 ## Cómo está organizado
 
@@ -38,8 +38,8 @@ app/(flujo)/        el embudo de compra: plano -> datos -> pago -> entradas
 components/         landing/, compra/ y ui/ segun donde se usan
 lib/api.ts          UNICO punto de contacto con el backend
 lib/consultas.ts    lecturas, encima de api.ts
-lib/acciones/       server actions (compra, pago)
-lib/fixtures.ts     datos de ejemplo, temporal hasta conectar el backend
+lib/acciones/       server actions (compra, pago, orden, contacto)
+lib/constantes.ts   el colchon de un minuto del checkout, escrito una sola vez
 sql/                esquema y seed de Postgres
 ```
 

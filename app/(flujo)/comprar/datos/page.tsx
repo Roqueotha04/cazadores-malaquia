@@ -21,6 +21,9 @@ export default async function Datos(props: PageProps<"/comprar/datos">) {
     obtenerAsientosElegidos(pedidos),
   ]);
 
+  // Ids que no existen en el salón: alguien escribió la url a mano.
+  if (asientos.length === 0) redirect("/comprar");
+
   // Si mientras completaba los datos alguien se llevó una silla, se lo decimos
   // acá y no después de que cargue todo el formulario.
   const ocupadas = asientos.filter((a) => a.estado !== "DISPONIBLE");
@@ -34,9 +37,12 @@ export default async function Datos(props: PageProps<"/comprar/datos">) {
       <header className="mt-8 border-b border-line pb-8">
         <Link
           href={`/comprar?asientos=${pedidos.join(",")}`}
-          className="inline-flex min-h-[44px] items-center text-sm text-ink-faint transition-colors duration-200 hover:text-brass"
+          className="group inline-flex min-h-[44px] items-center text-sm text-ink-faint transition-colors duration-200 ease-[var(--ease-salida)] hover:text-brass"
         >
-          <span aria-hidden className="mr-1.5">
+          <span
+            aria-hidden
+            className="mr-1.5 transition-transform duration-200 ease-[var(--ease-salida)] group-hover:-translate-x-1"
+          >
             ←
           </span>
           Volver al plano
@@ -90,7 +96,7 @@ export default async function Datos(props: PageProps<"/comprar/datos">) {
               )}
             </div>
           ) : (
-            <FormularioDatos asientos={pedidos} />
+            <FormularioDatos asientos={asientos.map((a) => a.id)} />
           )}
         </div>
 

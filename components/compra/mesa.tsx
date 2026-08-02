@@ -76,7 +76,9 @@ function MesaBase({ mesa, seleccion, topeAlcanzado, onElegir }: Props) {
                 key={asiento.id}
                 id={asiento.id}
                 mesa={mesa.numero}
-                silla={asiento.posicion}
+                // El numero global (1..730), que es el que ve la gente y el que
+                // imprime el PDF. `posicion` solo ordena la columna.
+                silla={asiento.numero}
                 estado={asiento.estado}
                 elegida={elegidos.has(asiento.id)}
                 bloqueada={topeAlcanzado && !elegidos.has(asiento.id)}

@@ -15,8 +15,8 @@ export default async function Inicio() {
     <>
       <Hero
         fecha={evento.fecha}
+        lugar={evento.lugar}
         precioCentavos={evento.precioCentavos}
-        disponibles={disponibles}
       />
       <SeccionEntradas evento={evento} disponibles={disponibles} />
       <SobreNosotros />

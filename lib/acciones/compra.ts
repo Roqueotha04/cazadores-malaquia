@@ -2,9 +2,9 @@
 
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { enviar, SIN_BACKEND } from "../api";
-import { obtenerEvento } from "../consultas";
-import { crearReservaSchema } from "../validacion";
+import { enviar } from "../api";
+import { obtenerEvento, type OrdenJson } from "../consultas";
+import { crearOrdenSchema } from "../validacion";
 
 export type EstadoFormulario = {
   /** Error general, arriba del formulario. */
@@ -13,14 +13,18 @@ export type EstadoFormulario = {
   errores?: Record<string, string[] | undefined>;
   /** Sillas que se llevó otra persona mientras esta completaba sus datos. */
   ocupadas?: number[];
+  /** Lo que la persona escribió, para no borrárselo al volver con errores. */
+  valores?: Record<string, string>;
 };
+
+const CAMPOS = ["nombre", "apellido", "dni", "email", "celular"] as const;
 
 /**
  * Acción del formulario de compra.
  *
- * Valida de este lado para dar feedback rápido, manda la compra al backend y
- * lleva a la página de la reserva. Si algo falla devuelve el error para
- * mostrarlo en pantalla: nunca lanza al navegador.
+ * Crea la orden —que es lo que reserva las butacas— y lleva a la pantalla de
+ * pago. Si algo falla devuelve el error para mostrarlo en pantalla: nunca lanza
+ * al navegador.
  *
  * La validación de acá es por comodidad, no por seguridad: el backend valida
  * todo otra vez y es el único que decide.
@@ -31,17 +35,20 @@ export async function enviarCompra(
 ): Promise<EstadoFormulario> {
   const evento = await obtenerEvento();
 
+  // Los valores tal como los escribió la persona. React 19 resetea el
+  // formulario cuando la action termina, aunque haya devuelto errores: si no
+  // vuelven acá, quien se equivoca en un dígito del DNI reescribe todo.
+  const crudos = Object.fromEntries(
+    CAMPOS.map((campo) => [campo, String(datos.get(campo) ?? "")]),
+  );
+
   if (!evento.ventasAbiertas) {
-    return { error: "La venta de entradas no está abierta." };
+    return { error: "La venta de entradas no está abierta.", valores: crudos };
   }
 
-  const validacion = crearReservaSchema(evento.maxAsientosPorCompra).safeParse({
-    nombre: datos.get("nombre"),
-    apellido: datos.get("apellido"),
-    dni: datos.get("dni"),
-    email: datos.get("email"),
-    celular: datos.get("celular"),
-    asientosIds: String(datos.get("asientos") ?? "")
+  const validacion = crearOrdenSchema(evento.maxAsientosPorCompra).safeParse({
+    ...crudos,
+    asientoIds: String(datos.get("asientos") ?? "")
       .split(",")
       .filter(Boolean)
       .map(Number),
@@ -51,42 +58,62 @@ export async function enviarCompra(
     const { fieldErrors, formErrors } = z.flattenError(validacion.error);
     return {
       errores: fieldErrors,
-      error: formErrors[0] ?? fieldErrors.asientosIds?.[0],
+      error: formErrors[0] ?? fieldErrors.asientoIds?.[0],
+      valores: crudos,
     };
   }
 
-  // Sin repetidos y ordenados: el backend los necesita asi para tomar las
-  // filas siempre en el mismo orden.
-  const asientosIds = [...new Set(validacion.data.asientosIds)].sort(
-    (a, b) => a - b,
-  );
+  const { asientoIds, ...usuario } = validacion.data;
 
-  const resultado = SIN_BACKEND
-    ? { ok: true as const, datos: { token: crypto.randomUUID() } }
-    : await enviar<{ token: string }>("/api/reservas", {
-        ...validacion.data,
-        asientosIds,
-      });
+  // Sin repetidos y ordenados. El backend igual cuenta los repetidos una sola
+  // vez contra el límite, pero mandar la lista limpia evita discutirlo.
+  const ids = [...new Set(asientoIds)].sort((a, b) => a - b);
+
+  const resultado = await enviar<OrdenJson>("/api/ordenes", {
+    usuario,
+    asientoIds: ids,
+  });
 
   if (!resultado.ok) {
-    return { error: resultado.error, ocupadas: resultado.asientosOcupados };
+    return {
+      error: resultado.error,
+      errores: aErroresDeCampo(resultado.campos),
+      ocupadas: resultado.asientosOcupados,
+      valores: crudos,
+    };
   }
 
   // Fuera de todo try: redirect() funciona lanzando una señal que Next atrapa.
   redirect(`/reserva/${resultado.datos.token}`);
 }
 
-/** El comprador abandona: se liberan las sillas para que las tome otro. */
-export async function cancelarReserva(token: string): Promise<void> {
-  if (!SIN_BACKEND) {
-    const resultado = await enviar<null>(
-      `/api/reservas/${encodeURIComponent(token)}/cancelar`,
-      {},
-    );
+/**
+ * `{ "usuario.dni": "..." }` → `{ dni: ["..."] }`.
+ *
+ * El backend nombra los campos por su ruta dentro del request; el formulario los
+ * conoce por su nombre a secas. Sin esta traducción el error del back queda
+ * arriba de todo en vez de debajo del input que lo causó.
+ */
+function aErroresDeCampo(campos?: Record<string, string>) {
+  if (!campos) return undefined;
 
-    // Si falla no hay nada que mostrarle: la reserva vence sola en 30 minutos.
-    if (!resultado.ok) console.error("cancelarReserva:", resultado.error);
-  }
+  return Object.fromEntries(
+    Object.entries(campos).map(([ruta, mensaje]) => [
+      ruta.split(".").pop() ?? ruta,
+      [mensaje],
+    ]),
+  );
+}
+
+/** El comprador abandona: se liberan las butacas para que las tome otro. */
+export async function cancelarOrden(token: string): Promise<void> {
+  const resultado = await enviar<null>(
+    `/api/ordenes/${encodeURIComponent(token)}/cancelar`,
+    {},
+  );
+
+  // Si falla no hay nada que mostrarle: la orden vence sola.
+  if (!resultado.ok) console.error("cancelarOrden:", resultado.error);
 
   redirect("/comprar");
 }

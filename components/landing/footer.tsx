@@ -29,7 +29,7 @@ export function Footer() {
             <li>
               <Link
                 href="/comprar"
-                className="text-ink-soft transition-colors duration-200 hover:text-brass"
+                className="subrayado-vivo text-ink-soft"
               >
                 Comprar entradas
               </Link>
@@ -37,7 +37,7 @@ export function Footer() {
             <li>
               <a
                 href="#contacto"
-                className="text-ink-soft transition-colors duration-200 hover:text-brass"
+                className="subrayado-vivo text-ink-soft"
               >
                 Contacto
               </a>

@@ -213,6 +213,43 @@
   animation: subir 0.7s var(--ease-salida) 0.24s both;
 }
 
+/* Link con subrayado de laton que crece desde la izquierda.
+ *
+ * Va en CSS crudo y no como clase de utilidad porque necesita un ::after. Por
+ * eso tambien lleva la guarda `@media (hover: hover)` escrita a mano: la
+ * variante `hover:` de Tailwind la trae de fabrica, el CSS suelto no. Sin la
+ * guarda, en el celular el subrayado queda pegado despues de un toque.
+ *
+ * El bloque global de `prefers-reduced-motion` de mas abajo anula la transicion
+ * solo, sin trabajo extra. */
+@utility subrayado-vivo {
+  position: relative;
+  transition: color 0.2s var(--ease-salida);
+
+  &::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -0.25rem;
+    height: 1px;
+    background-color: var(--color-brass);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.2s var(--ease-salida);
+  }
+
+  @media (hover: hover) {
+    &:hover {
+      color: var(--color-brass);
+    }
+
+    &:hover::after {
+      transform: scaleX(1);
+    }
+  }
+}
+
 /* Textura de papel muy tenue, para que los paneles grandes no se lean como
    plastico. Barata: un gradiente, sin imagen. */
 @utility veteada {
@@ -221,6 +258,41 @@
     transparent 1px
   );
   background-size: 4px 4px;
+}
+
+/* Las entradas se guardan como PDF o se imprimen desde el navegador.
+ *
+ * El sitio es verde oscuro sobre oscuro: tal cual, una hoja se lleva medio
+ * cartucho y el codigo de la entrada queda ilegible. Asi que en papel el
+ * sistema se da vuelta entero — negro sobre blanco, bordes grises, sin sombras
+ * ni texturas. */
+@media print {
+  body {
+    background: #fff !important;
+    color: #000 !important;
+  }
+
+  *,
+  *::before,
+  *::after {
+    background: transparent !important;
+    background-image: none !important;
+    color: #000 !important;
+    box-shadow: none !important;
+    border-color: #999 !important;
+  }
+
+  /* Lo que no tiene sentido en papel: barras, pies y botones. */
+  header,
+  footer,
+  .no-imprimir {
+    display: none !important;
+  }
+
+  /* Que no se parta una entrada entre dos hojas. */
+  li {
+    break-inside: avoid;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

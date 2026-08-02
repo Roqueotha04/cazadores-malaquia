@@ -39,7 +39,7 @@ export function GrillaMesas({
                 "disabled:opacity-45",
                 mias > 0
                   ? "border-brass/60 bg-surface-high"
-                  : "border-line bg-surface-raised enabled:hover:border-brass",
+                  : "border-line bg-surface-raised enabled:hover:border-brass enabled:hover:bg-surface-high",
               ].join(" ")}
             >
               <span className="flex items-baseline justify-between gap-2">
@@ -116,7 +116,7 @@ export function DetalleMesa({
                 key={asiento.id}
                 id={asiento.id}
                 mesa={mesa.numero}
-                silla={asiento.posicion}
+                silla={asiento.numero}
                 estado={asiento.estado}
                 elegida={elegidos.has(asiento.id)}
                 bloqueada={topeAlcanzado && !elegidos.has(asiento.id)}

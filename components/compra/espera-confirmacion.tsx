@@ -1,44 +1,29 @@
-"use client";
-
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-
-const CADA_MS = 3000;
-const LIMITE_SEG = 90;
-
 /**
- * Espera activa mientras el backend confirma el pago.
+ * La pantalla mientras el backend confirma el pago.
  *
  * Este es el estado mas delicado de todo el sistema. Mercado Pago devuelve al
- * comprador al instante, pero la aprobacion real la trae el webhook, que llega
- * despues. O sea que existe una ventana en la que el pago esta hecho y el
- * sistema todavia no lo sabe.
+ * comprador al instante, pero la aprobacion real llega por webhook, despues. O
+ * sea que existe una ventana en la que el pago esta hecho y el sistema todavia
+ * no lo sabe.
  *
  * Si eso se le muestra como error, el comprador cree que perdio $150.000. Asi
  * que se muestra como lo que es: una espera, con el reloj a la vista y una
  * salida a WhatsApp si tarda de mas. Nunca se queda girando para siempre.
+ *
+ * Este componente no consulta nada: solo dibuja. Quien pregunta —y quien decide
+ * cuando dejar de preguntar— es `vuelta-del-checkout.tsx`.
  */
-export function EsperaConfirmacion({ token }: { token: string }) {
-  const router = useRouter();
-  const [segundos, setSegundos] = useState(0);
-
-  const agotado = segundos >= LIMITE_SEG;
-
-  useEffect(() => {
-    if (agotado) return;
-
-    const reloj = setInterval(() => setSegundos((s) => s + 1), 1000);
-    // `refresh` vuelve a correr el server component, que relee la reserva. En
-    // cuanto el webhook la marque como pagada, la pagina redirige sola.
-    const consulta = setInterval(() => router.refresh(), CADA_MS);
-
-    return () => {
-      clearInterval(reloj);
-      clearInterval(consulta);
-    };
-  }, [router, agotado]);
-
-  if (agotado) {
+export function EsperaConfirmacion({
+  token,
+  segundos,
+  demorado,
+}: {
+  token: string;
+  segundos: number;
+  /** Se agotaron los reintentos y seguimos sin respuesta. */
+  demorado: boolean;
+}) {
+  if (demorado) {
     return (
       <div className="rounded-sm border border-alerta/50 bg-alerta/10 px-5 py-5">
         <h2 className="text-ink">Está tardando más de lo normal</h2>
@@ -62,7 +47,7 @@ export function EsperaConfirmacion({ token }: { token: string }) {
         <p className="mt-5 border-t border-alerta/30 pt-4 text-sm text-ink-faint">
           Tu código de compra, por si te lo piden:
           <br />
-          <span className="mt-1 inline-block font-medium text-ink tabular">
+          <span className="mt-1 inline-block font-medium text-ink tabular select-all break-all">
             {token}
           </span>
         </p>

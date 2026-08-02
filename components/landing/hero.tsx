@@ -8,17 +8,18 @@ import { fechaEvento, precio } from "@/lib/formato";
  * en vez de cortarla con un borde.
  *
  * Composicion centrada, que es lo que se decidio para la direccion "oscuro
- * señorial". Los datos duros van abajo en una ficha, no como titulillo arriba
- * del titulo.
+ * señorial". Los datos duros van sueltos abajo del parrafo: cuando, donde y
+ * cuanto. Antes vivian dentro de una ficha con borde y fondo, y ahi la ficha
+ * competia con la foto — el dato no necesitaba marco.
  */
 export function Hero({
   fecha,
+  lugar,
   precioCentavos,
-  disponibles,
 }: {
   fecha: Date | null;
+  lugar: string | null;
   precioCentavos: number;
-  disponibles: number;
 }) {
   return (
     <section className="relative isolate flex min-h-[88svh] flex-col justify-end overflow-hidden">
@@ -47,52 +48,36 @@ export function Hero({
           <span className="mt-1 block text-brass">2026</span>
         </h1>
 
-        <p className="entra-2 mx-auto mt-6 max-w-xl text-lg text-ink-soft sm:text-xl">
+        <p className="entra-2 mx-auto mt-6 max-w-xl text-lg text-ink-soft">
           Una vez al año nos juntamos todos en la misma mesa. Elegí tu silla y
           asegurate el lugar.
         </p>
 
-        <div className="entra-3 mt-10 flex flex-col items-center gap-6">
+        <div className="entra-3 mt-10 flex flex-col items-center gap-10">
+          {/* Los rotulos en mayuscula chica valen aca: son etiquetas de dato,
+              no titulillos de seccion. En celular apilan — a 320px una fila de
+              tres deja 95px por celda para una fecha formateada. */}
+          <dl className="flex flex-col items-center gap-6 sm:flex-row sm:justify-center sm:gap-10">
+            <Celda rotulo="Cuándo" valor={fechaEvento(fecha).split(",")[0]} />
+            <Celda rotulo="Dónde" valor={lugar ?? "A confirmar"} />
+            <Celda rotulo="Por silla" valor={precio(precioCentavos)} />
+          </dl>
+
           <BotonLink href="/comprar" className="w-full sm:w-auto">
             Elegir mi silla
           </BotonLink>
-
-          {/* Ficha de datos duros. Los rotulos en mayuscula chica valen aca:
-              son etiquetas de dato, no titulillos de seccion. */}
-          <dl className="grid w-full max-w-lg grid-cols-3 divide-x divide-line rounded-sm border border-line bg-surface-raised/70 backdrop-blur-sm">
-            <Celda rotulo="Cuándo" valor={fechaEvento(fecha).split(",")[0]} />
-            <Celda rotulo="Por silla" valor={precio(precioCentavos)} />
-            <Celda
-              rotulo="Libres"
-              valor={`${disponibles}`}
-              nota="de 730"
-            />
-          </dl>
         </div>
       </div>
     </section>
   );
 }
 
-function Celda({
-  rotulo,
-  valor,
-  nota,
-}: {
-  rotulo: string;
-  valor: string;
-  nota?: string;
-}) {
+function Celda({ rotulo, valor }: { rotulo: string; valor: string }) {
   return (
-    <div className="px-3 py-4">
+    <div className="group">
       <dt className="dato">{rotulo}</dt>
-      <dd className="mt-1.5 font-display text-base text-ink tabular sm:text-lg">
+      <dd className="mt-1.5 font-display text-base text-ink transition-colors duration-200 ease-[var(--ease-salida)] tabular group-hover:text-brass-light sm:text-lg">
         {valor}
-        {nota && (
-          <span className="ml-1 text-xs font-normal text-ink-faint">
-            {nota}
-          </span>
-        )}
       </dd>
     </div>
   );

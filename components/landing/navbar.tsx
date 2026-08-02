@@ -44,7 +44,7 @@ export function Navbar() {
               <li key={s.href}>
                 <a
                   href={s.href}
-                  className="text-sm text-ink-soft transition-colors duration-200 hover:text-brass"
+                  className="subrayado-vivo text-sm text-ink-soft"
                 >
                   {s.texto}
                 </a>

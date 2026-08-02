@@ -1,8 +1,11 @@
 // Tipos compartidos entre el servidor y los componentes de cliente.
+//
+// Siguen el vocabulario del backend (`.claude/api-frontend.md`): lo que aca se
+// llama orden es lo que el back llama orden. La url publica sigue siendo
+// /reserva/{token} porque es la que el comprador tiene guardada.
 
 export type EstadoAsiento = "DISPONIBLE" | "RESERVADO" | "VENDIDO";
-export type EstadoReserva = "ACTIVA" | "PAGADA" | "EXPIRADA" | "CANCELADA";
-export type EstadoPago = "PENDIENTE" | "APROBADO" | "RECHAZADO";
+export type EstadoOrden = "ACTIVA" | "PAGADA" | "EXPIRADA" | "CANCELADA";
 
 export type Evento = {
   nombre: string;
@@ -14,16 +17,31 @@ export type Evento = {
   ventasAbiertas: boolean;
 };
 
+/**
+ * Una butaca del plano.
+ *
+ * `numero` es el identificador global, 1 a 730: es el que ve la gente, el que
+ * imprime el PDF de la entrada y el que se canta en la puerta. La mesa 3 no
+ * tiene butaca 1, va de la 107 a la 158.
+ *
+ * `posicion` es el lugar dentro del lado de la mesa (1 a capacidad) y sirve solo
+ * para dibujar la columna en orden. No es unico en el salon: hay catorce
+ * butacas con `posicion` 1.
+ */
 export type Asiento = {
   id: number;
+  numero: number;
   posicion: number;
   lado: "IZQUIERDA" | "DERECHA";
   estado: EstadoAsiento;
 };
 
 export type Mesa = {
+  id: number;
   numero: number;
   fila: "ARRIBA" | "ABAJO";
+  /** Posicion de la mesa dentro de su fila, para dibujarlas de izquierda a derecha. */
+  orden: number;
   capacidad: number;
   asientos: Asiento[];
 };
@@ -33,29 +51,57 @@ export type Mapa = {
   mesas: Mesa[];
 };
 
-/** Un asiento con su mesa, para mostrarlo como "Mesa 13 · Silla 6". */
+/** Una butaca con su mesa, para mostrarla como "Mesa 13 · Silla 632". */
 export type AsientoElegido = {
   id: number;
   mesa: number;
+  /** El `numero` global del asiento, no su posicion en la mesa. */
   silla: number;
 };
 
-export type Reserva = {
-  token: string;
-  estado: EstadoReserva;
-  expiraEn: Date;
-  titular: string;
+export type UsuarioOrden = {
+  dni: string;
+  nombre: string;
+  apellido: string;
   email: string;
-  asientos: AsientoElegido[];
-  montoCentavos: number;
-  estadoPago: EstadoPago;
+  celular: string;
+};
+
+/** Una butaca dentro de una orden. `numero` es el global; `asientoId`, la clave. */
+export type Butaca = {
+  asientoId: number;
+  numero: number;
+  mesaNumero: number;
+};
+
+export type Orden = {
+  token: string;
+  estado: EstadoOrden;
+  /** Congelado al crear la orden: vale lo que se le mostro al comprador. */
+  precioUnitarioCentavos: number;
+  totalCentavos: number;
+  creadoEl: Date | null;
+  /** `null` cuando la orden ya esta pagada: esa reserva no vence nunca mas. */
+  expiraEn: Date | null;
+  pagadoEl: Date | null;
+  usuario: UsuarioOrden;
+  butacas: Butaca[];
 };
 
 export type Entrada = {
+  /** El uuid completo. Sin QR todavia, es lo unico que confirma la entrada. */
   codigo: string;
-  mesa: number;
-  silla: number;
+  mesaNumero: number;
+  asientoNumero: number;
+  titular: string;
+  /** `null` hasta que la escanean en la puerta. */
+  usadoEl: Date | null;
 };
+
+/** "Nombre Apellido": el back manda los dos campos por separado. */
+export function titularDe(usuario: UsuarioOrden) {
+  return `${usuario.nombre} ${usuario.apellido}`.trim();
+}
 
 /** Lo que devuelven todas las acciones. Nunca lanzan al navegador. */
 export type Resultado<T> =

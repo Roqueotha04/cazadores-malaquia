@@ -1,9 +1,12 @@
 import Image from "next/image";
 
 /**
- * Composicion asimetrica de dos fotos: la armeria grande, el equipo mas chica y
- * corrida. Rompe la grilla a proposito — dos imagenes del mismo tamaño lado a
- * lado se leen como plantilla.
+ * Composicion asimetrica de dos fotos: la armeria grande, el salon preparado
+ * mas chico y corrido. Rompe la grilla a proposito — dos imagenes del mismo
+ * tamaño lado a lado se leen como plantilla.
+ *
+ * La foto del equipo vive en el banner de la seccion de entradas: es apaisada y
+ * ahi entra sin recortar cabezas.
  */
 export function SobreNosotros() {
   return (
@@ -13,25 +16,25 @@ export function SobreNosotros() {
     >
       <div className="mx-auto grid max-w-6xl items-center gap-14 lg:grid-cols-2 lg:gap-20">
         <div className="relative">
-          <div className="relative aspect-[4/5] overflow-hidden rounded-sm sm:aspect-[4/3] lg:aspect-[4/5]">
+          <div className="group relative aspect-[4/5] overflow-hidden rounded-sm sm:aspect-[4/3] lg:aspect-[4/5]">
             <Image
               src="/sobre-nosotros.webp"
               alt="El mostrador de la Armería Bonifacio Malaquía"
               fill
               sizes="(min-width: 1024px) 50vw, 100vw"
-              className="object-cover"
+              className="object-cover transition-transform duration-500 ease-[var(--ease-salida)] group-hover:scale-[1.03]"
             />
           </div>
 
           {/* La segunda foto se monta sobre la primera. Solo en pantallas donde
               hay lugar de verdad. */}
-          <div className="absolute -bottom-8 -right-4 hidden aspect-square w-44 overflow-hidden rounded-sm border-4 border-surface-sunken sm:block lg:-right-8 lg:w-52">
+          <div className="group absolute -bottom-8 -right-4 hidden aspect-square w-44 overflow-hidden rounded-sm border-4 border-surface-sunken sm:block lg:-right-8 lg:w-52">
             <Image
-              src="/equipo.webp"
-              alt="Parte del equipo que organiza la cena"
+              src="/extra.webp"
+              alt="Las mesas largas del salón, preparadas antes de que llegue la gente"
               fill
               sizes="208px"
-              className="object-cover"
+              className="object-cover transition-transform duration-500 ease-[var(--ease-salida)] group-hover:scale-[1.03]"
             />
           </div>
         </div>

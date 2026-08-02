@@ -59,7 +59,7 @@ function SillaBase({
       title={etiqueta}
       className={[
         "relative rounded-[2px] border font-medium tabular",
-        "transition-[transform,background-color,border-color] duration-150 ease-[var(--ease-salida)]",
+        "transition-[transform,background-color,border-color,box-shadow] duration-150 ease-[var(--ease-salida)]",
         grande
           ? "flex size-11 items-center justify-center text-sm"
           : "h-3.5 w-5",
@@ -69,7 +69,10 @@ function SillaBase({
             ? "border-brass-light bg-silla-elegida text-carbon shadow-[0_0_0_1px_var(--color-carbon)_inset]"
             : bloqueada
               ? "cursor-not-allowed border-line bg-silla-libre/30 text-ink/40"
-              : "border-line-strong bg-silla-libre text-carbon hover:z-[var(--z-plano)] hover:scale-125 hover:border-brass hover:bg-brass",
+              : // La escala se queda: en un chip de 20×14 ayuda a apuntar. El
+                // anillo es el que hace que se vea cual esta bajo el mouse
+                // cuando hay 730 juntas.
+                "border-line-strong bg-silla-libre text-carbon hover:z-[var(--z-plano)] hover:scale-125 hover:border-brass hover:bg-brass hover:ring-2 hover:ring-brass-light/50",
       ].join(" ")}
     >
       {grande ? (elegida ? "✓" : silla) : null}

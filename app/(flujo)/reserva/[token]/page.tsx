@@ -1,19 +1,29 @@
 import { notFound, redirect } from "next/navigation";
 import { Contador } from "@/components/compra/contador";
 import { BotonPagar } from "@/components/compra/boton-pagar";
+import { RecordarOrden } from "@/components/compra/recordar-orden";
 import { Pasos } from "@/components/ui/pasos";
 import { BotonLink } from "@/components/ui/boton";
-import { obtenerReservaPorToken } from "@/lib/consultas";
+import { COLCHON_PAGO_MS } from "@/lib/constantes";
+import { obtenerOrdenPorToken } from "@/lib/consultas";
 import { precio, ubicacion } from "@/lib/formato";
+import { titularDe } from "@/lib/tipos";
 
 export default async function Reserva(props: PageProps<"/reserva/[token]">) {
   const { token } = await props.params;
-  const reserva = await obtenerReservaPorToken(token);
+  const orden = await obtenerOrdenPorToken(token);
 
-  if (!reserva) notFound();
-  if (reserva.estado === "PAGADA") redirect(`/entradas/${token}`);
+  if (!orden) notFound();
+  if (orden.estado === "PAGADA") redirect(`/entradas/${token}`);
 
-  const vencida = reserva.estado !== "ACTIVA" || reserva.expiraEn <= new Date();
+  /* El límite que se le muestra a la persona no es `expiraEn`, es un minuto
+     antes: el link de Mercado Pago vence ahí y pedirlo más tarde devuelve 409.
+     Ver lib/constantes.ts. */
+  const limite = orden.expiraEn
+    ? new Date(orden.expiraEn.getTime() - COLCHON_PAGO_MS)
+    : null;
+
+  const vencida = orden.estado !== "ACTIVA" || !limite || limite <= new Date();
 
   if (vencida) {
     return (
@@ -35,6 +45,9 @@ export default async function Reserva(props: PageProps<"/reserva/[token]">) {
 
   return (
     <div className="mx-auto w-full max-w-3xl px-5 py-8">
+      {/* Sin esto, la vuelta del checkout no sabe de qué orden hablar. */}
+      <RecordarOrden token={orden.token} />
+
       <Pasos actual={3} />
 
       <header className="mt-8">
@@ -48,7 +61,7 @@ export default async function Reserva(props: PageProps<"/reserva/[token]">) {
       <div className="mt-8 rounded-sm border border-brass/40 bg-brass/[0.08] px-5 py-5">
         <p className="dato">Tiempo para completar</p>
         <div className="mt-2">
-          <Contador expiraEn={reserva.expiraEn.toISOString()} />
+          <Contador expiraEn={limite.toISOString()} />
         </div>
         <p className="mt-3 text-sm text-ink-soft">
           Tus sillas están guardadas hasta que se termine el tiempo. Si se vence,
@@ -59,22 +72,22 @@ export default async function Reserva(props: PageProps<"/reserva/[token]">) {
       <div className="mt-8 overflow-hidden rounded-sm border border-line bg-surface-raised">
         <div className="border-b border-line px-6 py-5">
           <p className="dato">A nombre de</p>
-          <h2 className="mt-1.5 text-ink">{reserva.titular}</h2>
-          <p className="mt-1 text-sm text-ink-soft">{reserva.email}</p>
+          <h2 className="mt-1.5 text-ink">{titularDe(orden.usuario)}</h2>
+          <p className="mt-1 text-sm text-ink-soft">{orden.usuario.email}</p>
         </div>
 
         <div className="px-6 py-5">
           <p className="dato">
-            {reserva.asientos.length === 1 ? "Tu silla" : "Tus sillas"}
+            {orden.butacas.length === 1 ? "Tu silla" : "Tus sillas"}
           </p>
 
-          <ul className="mt-3 grid gap-1.5 sm:grid-cols-2">
-            {reserva.asientos.map((a) => (
+          <ul className="mt-3 flex flex-col gap-1.5">
+            {orden.butacas.map((butaca) => (
               <li
-                key={a.id}
+                key={butaca.asientoId}
                 className="rounded-sm bg-surface-sunken px-3.5 py-2.5 font-medium text-ink tabular"
               >
-                {ubicacion(a.mesa, a.silla)}
+                {ubicacion(butaca.mesaNumero, butaca.numero)}
               </li>
             ))}
           </ul>
@@ -82,14 +95,14 @@ export default async function Reserva(props: PageProps<"/reserva/[token]">) {
           <div className="mt-6 flex items-baseline justify-between gap-4 border-t border-line pt-5">
             <span className="dato">Total a pagar</span>
             <span className="font-display text-3xl text-ink tabular">
-              {precio(reserva.montoCentavos)}
+              {precio(orden.totalCentavos)}
             </span>
           </div>
         </div>
       </div>
 
       <div className="mt-8">
-        <BotonPagar token={reserva.token} />
+        <BotonPagar token={orden.token} />
       </div>
     </div>
   );
