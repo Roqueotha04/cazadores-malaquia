@@ -27,7 +27,15 @@ const base = process.env.API_URL?.replace(/\/$/, "");
  */
 const TIMEOUT_MS = 8_000;
 
-type Opciones = { timeoutMs?: number };
+type Opciones = {
+  timeoutMs?: number;
+  /**
+   * Cabeceras extra. Hoy solo el `Authorization: Bearer` del panel: el front de
+   * venta no manda ninguna. Va aca y no en cada funcion porque `pedir` y
+   * `enviar` no arman el `RequestInit`, lo arma `llamar`.
+   */
+  headers?: Record<string, string>;
+};
 
 /** Error del backend. Guarda el status para poder distinguir un 404. */
 export class ErrorApi extends Error {
@@ -44,7 +52,7 @@ export class ErrorApi extends Error {
 async function llamar(
   ruta: string,
   init?: RequestInit,
-  { timeoutMs = TIMEOUT_MS }: Opciones = {},
+  { timeoutMs = TIMEOUT_MS, headers }: Opciones = {},
 ): Promise<Response> {
   // Ninguna pagina que toque el backend se puede prerenderizar: el mapa cambia
   // con cada compra y el estado de una orden cambia solo. `connection()` corta
@@ -66,7 +74,7 @@ async function llamar(
       // consulta a partir de las reservas vivas.
       cache: "no-store",
       signal: AbortSignal.timeout(timeoutMs),
-      headers: { accept: "application/json", ...init?.headers },
+      headers: { accept: "application/json", ...init?.headers, ...headers },
     });
   } catch (e) {
     // Next sale del prerender estatico lanzando un error interno, y un fetch
@@ -120,6 +128,14 @@ type ErrorDelBackend = {
 
 export type Fallo = {
   ok: false;
+  /**
+   * El status del backend, o 503 si no contesto.
+   *
+   * El front de venta no lo mira —le alcanza con `error`— pero el panel si:
+   * el 422 de `/reubicar` y el 409 de `/cambiar-butaca` se explican distinto, y
+   * un 404 de `/reenviar-entradas` significa "la orden no esta pagada".
+   */
+  status: number;
   error: string;
   campos?: Record<string, string>;
   asientosOcupados?: number[];
@@ -152,7 +168,11 @@ export async function enviar<T>(
     unstable_rethrow(e);
 
     console.error(`POST ${ruta}:`, e);
-    return { ok: false, error: "No pudimos conectar con el servidor. Probá de nuevo." };
+    return {
+      ok: false,
+      status: 503,
+      error: "No pudimos conectar con el servidor. Probá de nuevo.",
+    };
   }
 
   if (!res.ok) {
@@ -164,6 +184,7 @@ export async function enviar<T>(
 
     return {
       ok: false,
+      status: res.status,
       // `mensaje` primero y `error` ni de reserva: mostrarle "Conflict" a
       // alguien que esta comprando no le dice nada.
       error:

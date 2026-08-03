@@ -1,0 +1,239 @@
+// Tipos del panel de administracion.
+//
+// El contrato es `.claude/api-admin-frontend.md`. Valen las mismas convenciones
+// que en el front de venta: plata en centavos, fechas ISO-8601 con offset,
+// vocabulario del backend.
+//
+// Igual que en `lib/consultas.ts`, cada tipo tiene su gemelo "en el cable" con
+// las fechas como string. La conversion pasa una sola vez, en el borde
+// (`lib/admin/consultas.ts`), y de ahi para adentro son `Date`.
+
+import type { EstadoOrden, OrigenOrden, UsuarioOrden } from "@/lib/tipos";
+
+export type MedioPago = "MERCADOPAGO" | "EFECTIVO" | "TRANSFERENCIA";
+
+/** Los dos medios que se cobran afuera. Mercado Pago no se carga a mano. */
+export type MedioManual = Extract<MedioPago, "EFECTIVO" | "TRANSFERENCIA">;
+
+// Vive en `lib/tipos.ts` porque el detalle de orden lo necesita y ese tipo lo
+// comparte el flujo de compra publico. Se reexporta para no tocar a quienes ya
+// lo importan de acá.
+export type { OrigenOrden };
+
+export type TipoIncidencia = "PAGO_TARDIO" | "SIN_BUTACA";
+export type EstadoIncidencia = "ABIERTA" | "EN_CURSO";
+
+/** El de arriba a la derecha. `GET /api/auth/yo`. */
+export type Cuenta = {
+  email: string;
+  nombre: string;
+};
+
+// ---------------------------------------------------------------- Tablero
+
+/**
+ * `GET /api/admin/resumen`.
+ *
+ * `porMedio` trae siempre los tres medios y `ordenesPorEstado` los cuatro
+ * estados, aunque esten en cero: al panel no le tienen que aparecer renglones
+ * nuevos a medida que avanza la venta.
+ */
+export type Resumen = {
+  butacas: {
+    total: number;
+    /** Entradas emitidas. No se pisa con `reservadas`. */
+    vendidas: number;
+    /** Butacas agarradas sin pagar. */
+    reservadas: number;
+    libres: number;
+    entradasUsadas: number;
+  };
+  recaudacion: {
+    totalCentavos: number;
+    porMedio: { medio: MedioPago; totalCentavos: number; cantidad: number }[];
+    ordenesPorEstado: { estado: EstadoOrden; cantidad: number }[];
+  };
+  incidenciasPendientes: number;
+};
+
+// ----------------------------------------------------------------- Puerta
+
+/** Una entrada como la ve la puerta. Es la unica que trae `anuladaEl`. */
+export type EntradaInvitado = {
+  codigo: string;
+  mesaNumero: number;
+  asientoNumero: number;
+  titular: string;
+  /** `null` hasta que la escanean en la puerta. */
+  usadoEl: Date | null;
+  /**
+   * Dada de baja. La lista trae tambien las entradas anuladas: sin mirar esto
+   * una butaca anulada se lee como vigente y la puerta deja pasar a alguien
+   * que ya no tiene lugar.
+   */
+  anuladaEl: Date | null;
+};
+
+export type Invitado = {
+  dni: string;
+  nombre: string;
+  apellido: string;
+  email: string;
+  celular: string;
+  /**
+   * Compro y no llego a pagar. Sin este dato, quien llega diciendo que compro y
+   * no tiene ninguna entrada aparece igual que quien nunca compro.
+   */
+  tieneOrdenSinPagar: boolean;
+  entradas: EntradaInvitado[];
+};
+
+export type InvitadoJson = Omit<Invitado, "entradas"> & {
+  entradas: (Omit<EntradaInvitado, "usadoEl" | "anuladaEl"> & {
+    usadoEl: string | null;
+    anuladaEl: string | null;
+  })[];
+};
+
+// ---------------------------------------------------------------- Ordenes
+
+export type OrdenAdmin = {
+  token: string;
+  estado: EstadoOrden;
+  /** `WEB` es la compra del cliente; `ADMIN`, la que cargo el equipo. */
+  origen: OrigenOrden;
+  comprador: string;
+  dni: string;
+  creadoEl: Date | null;
+  pagadoEl: Date | null;
+  /** Las que la orden **todavia conserva**: una CANCELADA muestra 0. */
+  butacas: number;
+  totalCentavos: number;
+};
+
+export type OrdenAdminJson = Omit<OrdenAdmin, "creadoEl" | "pagadoEl"> & {
+  creadoEl: string | null;
+  pagadoEl: string | null;
+};
+
+// ---------------------------------------------------- Ventas cobradas a mano
+
+export type VentaManual = {
+  token: string;
+  comprador: string;
+  dni: string;
+  /** Cuando se **cargo** la venta, no cuando se cobro. */
+  creadoEl: Date | null;
+  butacas: number;
+  /**
+   * `null` si la venta no tiene cobro aprobado. No deberia pasar: es un dato
+   * roto y hay que mostrarlo como tal, nunca como cero.
+   */
+  medio: MedioManual | null;
+  montoCentavos: number | null;
+};
+
+export type VentaManualJson = Omit<VentaManual, "creadoEl"> & {
+  creadoEl: string | null;
+};
+
+/** Lo que pide `POST /api/admin/ventas`. Sin precio: sale del evento. */
+export type NuevaVenta = {
+  comprador: UsuarioOrden;
+  asientoIds: number[];
+  medio: MedioManual;
+};
+
+// ---------------------------------------------------------- Cola de casos
+
+/** Un caso de la lista: lo justo para llamar por telefono. */
+export type Incidencia = {
+  id: number;
+  tipo: TipoIncidencia;
+  estado: EstadoIncidencia;
+  comprador: string;
+  dni: string;
+  celular: string;
+  creadoEl: Date | null;
+};
+
+export type IncidenciaJson = Omit<Incidencia, "creadoEl"> & {
+  creadoEl: string | null;
+};
+
+export type Pago = {
+  montoCentavos: number;
+  medio: MedioPago;
+  estado: string;
+  aprobadoEl: Date | null;
+  /** `null` en las ventas cargadas a mano. */
+  referenciaExterna: string | null;
+};
+
+/**
+ * El caso completo. La `orden` viene con **todas** sus butacas, incluidas las
+ * liberadas: son las que esa persona habia elegido y perdio.
+ */
+export type Caso = Incidencia & {
+  detalle: string | null;
+  resueltaEl: Date | null;
+  resueltaPor: string | null;
+  orden: import("@/lib/tipos").Orden;
+  /** `null` si todavia no hay cobro aprobado. */
+  pago: Pago | null;
+};
+
+export type CasoJson = IncidenciaJson & {
+  detalle: string | null;
+  resueltaEl: string | null;
+  resueltaPor: string | null;
+  orden: import("@/lib/consultas").OrdenJson;
+  pago:
+    | (Omit<Pago, "aprobadoEl"> & { aprobadoEl: string | null })
+    | null;
+};
+
+// -------------------------------------------------------------- Etiquetas
+
+/** Los rotulos que se muestran. El backend manda el enum, la UI muestra esto. */
+export const MEDIO: Record<MedioPago, string> = {
+  MERCADOPAGO: "Mercado Pago",
+  EFECTIVO: "Efectivo",
+  TRANSFERENCIA: "Transferencia",
+};
+
+export const ESTADO_ORDEN: Record<EstadoOrden, string> = {
+  ACTIVA: "Activa",
+  PAGADA: "Pagada",
+  EXPIRADA: "Expirada",
+  CANCELADA: "Cancelada",
+};
+
+export const ORIGEN: Record<OrigenOrden, string> = {
+  WEB: "Web",
+  ADMIN: "Cargada a mano",
+};
+
+export const TIPO_INCIDENCIA: Record<TipoIncidencia, string> = {
+  PAGO_TARDIO: "Pago tardío",
+  SIN_BUTACA: "Sin butaca",
+};
+
+export const ESTADO_INCIDENCIA: Record<EstadoIncidencia, string> = {
+  ABIERTA: "Abierta",
+  EN_CURSO: "En curso",
+};
+
+/** El orden en el que se pintan, siempre el mismo. */
+export const MEDIOS: MedioPago[] = [
+  "MERCADOPAGO",
+  "EFECTIVO",
+  "TRANSFERENCIA",
+];
+
+export const ESTADOS_ORDEN: EstadoOrden[] = [
+  "ACTIVA",
+  "PAGADA",
+  "EXPIRADA",
+  "CANCELADA",
+];

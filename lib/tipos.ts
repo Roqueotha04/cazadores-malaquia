@@ -7,6 +7,9 @@
 export type EstadoAsiento = "DISPONIBLE" | "RESERVADO" | "VENDIDO";
 export type EstadoOrden = "ACTIVA" | "PAGADA" | "EXPIRADA" | "CANCELADA";
 
+/** `WEB` es la compra del cliente; `ADMIN`, la que cargo el equipo a mano. */
+export type OrigenOrden = "WEB" | "ADMIN";
+
 export type Evento = {
   nombre: string;
   fecha: Date | null;
@@ -77,6 +80,12 @@ export type Butaca = {
 export type Orden = {
   token: string;
   estado: EstadoOrden;
+  /**
+   * Opcional a proposito: el ejemplo de `OrdenResponse` en `api-frontend.md`
+   * todavia no lo lista, y este tipo lo comparte el flujo de compra publico.
+   * Solo se pinta si viene.
+   */
+  origen?: OrigenOrden;
   /** Congelado al crear la orden: vale lo que se le mostro al comprador. */
   precioUnitarioCentavos: number;
   totalCentavos: number;

@@ -26,8 +26,38 @@ export const celularSchema = z
       .regex(/^\d{10}$/, "Ingresá el celular con característica, sin 0 ni 15"),
   );
 
-const nombreSchema = z.string().trim().min(2, "Ingresá tu nombre").max(60);
-const apellidoSchema = z.string().trim().min(2, "Ingresá tu apellido").max(60);
+export const nombreSchema = z.string().trim().min(2, "Ingresá tu nombre").max(60);
+export const apellidoSchema = z
+  .string()
+  .trim()
+  .min(2, "Ingresá tu apellido")
+  .max(60);
+
+/**
+ * 20.123.456 y 20123456 son la misma persona.
+ *
+ * Suelto porque lo piden la compra, la carga a mano del panel y la busqueda de
+ * la puerta. Con puntos no se encuentra a nadie en la puerta.
+ */
+export const dniSchema = z
+  .string()
+  .transform((v) => v.replace(/\D/g, ""))
+  .pipe(z.string().regex(/^\d{7,8}$/, "El DNI tiene que tener 7 u 8 números"));
+
+export const emailSchema = z
+  .string()
+  .trim()
+  .toLowerCase()
+  .pipe(z.email("Revisá el email: ahí te mandamos las entradas"))
+  .pipe(z.string().max(120));
+
+/** Los cuatro datos de contacto de un comprador, sin el DNI. */
+export const contactoComprador = {
+  nombre: nombreSchema,
+  apellido: apellidoSchema,
+  email: emailSchema,
+  celular: celularSchema,
+};
 
 /**
  * El tope de asientos sale del evento, por eso es un parametro y no un numero
@@ -38,23 +68,8 @@ const apellidoSchema = z.string().trim().min(2, "Ingresá tu apellido").max(60);
  */
 export const crearOrdenSchema = (maxAsientos: number) =>
   z.object({
-    nombre: nombreSchema,
-    apellido: apellidoSchema,
-
-    // 20.123.456 y 20123456 son la misma persona.
-    dni: z
-      .string()
-      .transform((v) => v.replace(/\D/g, ""))
-      .pipe(z.string().regex(/^\d{7,8}$/, "El DNI tiene que tener 7 u 8 números")),
-
-    email: z
-      .string()
-      .trim()
-      .toLowerCase()
-      .pipe(z.email("Revisá el email: ahí te mandamos las entradas"))
-      .pipe(z.string().max(120)),
-
-    celular: celularSchema,
+    ...contactoComprador,
+    dni: dniSchema,
 
     // Singular, como lo llama el backend.
     asientoIds: z
