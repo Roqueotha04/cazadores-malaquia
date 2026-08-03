@@ -290,3 +290,20 @@ llega.
 
 El mail con los PDF de las entradas también sale del backend, al confirmarse el
 pago.
+
+---
+
+## Notas para implementar
+
+**`/pagar` y `/reconciliar` son lentos.** Los dos salen a hablar con Mercado
+Pago, y el SDK del backend espera hasta 20 s por intento y reintenta. Timeout de
+cliente de **30 s** para esos dos; para el resto, 8 s sobra. Cortar antes es
+mostrarle un error a alguien que solo tenía que esperar — o peor, a alguien que
+ya pagó.
+
+**El colchón del link está escrito de los dos lados.** El minuto de diferencia
+entre el vencimiento del link y el de la orden vive como
+`mp.minutos-antes-del-vencimiento` en el backend y como `COLCHON_PAGO_MS` en el
+front, y **no viaja en ninguna respuesta**. Si cambia de un lado tiene que
+cambiar del otro: si no, el contador muestra tiempo que ya no se puede usar y
+`/pagar` devuelve `OrdenExpirada`.

@@ -1,3 +1,17 @@
+> ## ⚠️ La arquitectura de este documento está desactualizada
+>
+> Describe el diseño original: **postgres.js directo desde Next, con server
+> actions tocando la base**. El repo ya no funciona así — migró a un **backend
+> Spring Boot / Kotlin por HTTP**, y el frontend no se conecta a Postgres nunca.
+>
+> **La referencia actual es `CLAUDE.md`** (arquitectura, convenciones,
+> invariantes) y los contratos en `.claude/api-frontend.md` y
+> `.claude/api-admin-frontend.md`.
+>
+> Lo que sigue siendo válido acá: los datos del evento, el plano del salón, el
+> esquema de la base y las etapas del proyecto. Todo lo que diga cómo el
+> frontend accede a los datos, no.
+
 # Cazadores Malaquía — Venta de entradas
 
 Web del evento anual de cazadores. Landing del negocio + venta online de entradas con
