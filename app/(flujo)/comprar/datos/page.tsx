@@ -96,7 +96,10 @@ export default async function Datos(props: PageProps<"/comprar/datos">) {
               )}
             </div>
           ) : (
-            <FormularioDatos asientos={asientos.map((a) => a.id)} />
+            <FormularioDatos
+              asientos={asientos.map((a) => a.id)}
+              minutosReserva={evento.minutosReserva}
+            />
           )}
         </div>
 

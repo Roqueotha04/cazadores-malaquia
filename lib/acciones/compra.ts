@@ -13,6 +13,15 @@ export type EstadoFormulario = {
   errores?: Record<string, string[] | undefined>;
   /** Sillas que se llevó otra persona mientras esta completaba sus datos. */
   ocupadas?: number[];
+  /**
+   * Este DNI llegó al tope de compras sin pagar abiertas (429).
+   *
+   * Es el único error de la API que no significa "corregí lo que mandaste": los
+   * datos están bien y las butacas pueden estar libres. Va aparte para que la
+   * pantalla no lo pinte como un error de validación, que mandaría a revisar
+   * campos que no tienen nada malo.
+   */
+  tope?: boolean;
   /** Lo que la persona escribió, para no borrárselo al volver con errores. */
   valores?: Record<string, string>;
 };
@@ -79,6 +88,9 @@ export async function enviarCompra(
       error: resultado.error,
       errores: aErroresDeCampo(resultado.campos),
       ocupadas: resultado.asientosOcupados,
+      // 429: hay un tope de compras sin pagar abiertas por DNI. No hay nada que
+      // corregir acá — hay que terminar o cancelar alguna de las otras.
+      tope: resultado.status === 429,
       valores: crudos,
     };
   }

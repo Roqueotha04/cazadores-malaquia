@@ -5,7 +5,7 @@ import { z } from "zod";
 import { TIMEOUT_MAIL_MS, enviarAdmin } from "../api";
 import { aOrden, type OrdenJson } from "@/lib/consultas";
 import type { Orden } from "@/lib/tipos";
-import { ventaManualSchema } from "../validacion";
+import { motivoSchema, ventaManualSchema } from "../validacion";
 
 /**
  * Registrar una venta cobrada por fuera de la web.
@@ -14,8 +14,8 @@ import { ventaManualSchema } from "../validacion";
  * en efectivo o por transferencia. No lleva precio, sale del evento — un campo
  * menos que tipear mal a las once de la noche.
  *
- * **Y no se deshace**: no hay endpoint para anular una venta manual. Si los
- * numeros se cargan mal, quedan mal. De ahi que la pantalla obligue a revisar
+ * Se puede dar de baja entera con `anularVenta`, mas abajo, pero eso deja rastro
+ * en el historial y no devuelve la plata: la pantalla igual obliga a revisar
  * antes de enviar.
  */
 
@@ -93,6 +93,40 @@ export async function cargarVenta(
   refresh();
 
   return { orden: aOrden(resultado.datos) };
+}
+
+/**
+ * Da de baja una venta cargada a mano, entera.
+ *
+ * Anula todas sus entradas, devuelve las butacas al mapa, deja la orden en
+ * `ANULADA` y la saca de la recaudacion. **No devuelve la plata**: el reintegro
+ * lo hace el equipo a mano, y el motivo es lo unico que despues lo explica.
+ *
+ * Es idempotente: volver a llamarla no es error. Los dos rechazos que importan
+ * vienen explicados desde el backend y se muestran tal cual — **409** si alguien
+ * de esa venta ya paso por la puerta (esa persona esta adentro y su butaca no se
+ * puede volver a vender) y **422** si el token es de una compra de la web.
+ */
+export async function anularVenta(
+  token: string,
+  motivo: string,
+): Promise<{ ok: boolean; error?: string }> {
+  const validacion = motivoSchema.safeParse(motivo);
+
+  if (!validacion.success) {
+    return { ok: false, error: validacion.error.issues[0].message };
+  }
+
+  const resultado = await enviarAdmin<null>(
+    `/api/admin/ventas/${encodeURIComponent(token)}/anular`,
+    { motivo: validacion.data },
+  );
+
+  if (!resultado.ok) return { ok: false, error: resultado.error };
+
+  refresh();
+
+  return { ok: true };
 }
 
 /** Como se llama cada campo en la pantalla, para poder nombrarlo en un aviso. */

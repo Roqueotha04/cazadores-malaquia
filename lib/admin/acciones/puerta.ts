@@ -2,6 +2,7 @@
 
 import { refresh } from "next/cache";
 import { TIMEOUT_MAIL_MS, enviarAdmin } from "../api";
+import { motivoSchema } from "../validacion";
 
 /**
  * Las tres acciones sobre una entrada emitida.
@@ -58,13 +59,24 @@ export async function validarEntrada(
  * Es idempotente: anular dos veces no es error. **409 si la entrada ya se uso**
  * — esa persona esta adentro, y liberar su silla la pondria a la venta con
  * alguien sentado.
+ *
+ * El motivo es obligatorio y queda en el historial. Anular no devuelve la plata
+ * —el reintegro lo hace el equipo a mano— asi que ese texto es lo unico que
+ * despues explica por que esa butaca volvio al mapa.
  */
 export async function anularEntrada(
   codigo: string,
+  motivo: string,
 ): Promise<{ ok: boolean; error?: string }> {
+  const validacion = motivoSchema.safeParse(motivo);
+
+  if (!validacion.success) {
+    return { ok: false, error: validacion.error.issues[0].message };
+  }
+
   const resultado = await enviarAdmin<null>(
     `/api/entradas/${encodeURIComponent(codigo)}/anular`,
-    {},
+    { motivo: validacion.data },
   );
 
   if (!resultado.ok) return { ok: false, error: resultado.error };

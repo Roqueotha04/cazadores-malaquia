@@ -7,6 +7,7 @@ import {
   ESTADO_INCIDENCIA,
   MEDIO,
   TIPO_INCIDENCIA,
+  type TipoIncidencia,
 } from "@/lib/admin/tipos";
 import { fechaCorta, precio, ubicacion } from "@/lib/formato";
 import { Reubicar, Resolver } from "@/components/admin/casos/acciones-caso";
@@ -17,9 +18,33 @@ import {
   Encabezado,
   Panel,
   Pildora,
+  type Tono,
 } from "@/components/admin/ui/piezas";
 
 export const metadata = { title: "Caso" };
+
+/**
+ * Rojo para los dos que dejan a alguien parado en la puerta —sin butaca, o con
+ * menos entradas de las que pago— y ambar para los que son plata mal contada
+ * pero no bloquean a nadie esa noche.
+ */
+const TONO_INCIDENCIA: Record<TipoIncidencia, Tono> = {
+  SIN_BUTACA: "error",
+  BUTACAS_INCOMPLETAS: "error",
+  PAGO_TARDIO: "alerta",
+  MONTO_DISTINTO: "alerta",
+};
+
+/** Que quiere decir el tipo, en una linea, para quien esta por llamar. */
+const PORQUE: Record<TipoIncidencia, string> = {
+  PAGO_TARDIO:
+    "El pago entró después de que venciera la reserva, y para entonces las butacas ya habían vuelto a la venta.",
+  SIN_BUTACA: "La orden figura pagada pero no tiene ninguna butaca viva.",
+  BUTACAS_INCOMPLETAS:
+    "Se cobraron más butacas de las que salieron en entradas. Esta persona llega a la puerta con una entrada de menos: es lo más urgente de la cola.",
+  MONTO_DISTINTO:
+    "Mercado Pago informó un importe que no es el que se pidió cobrar. Es una diferencia de plata; no bloquea a nadie en la puerta.",
+};
 
 /**
  * Un caso completo, para tener todo a la vista antes de levantar el telefono.
@@ -56,7 +81,7 @@ export default async function CasoPage({
           </Link>
         }
       >
-        <Pildora tono={caso.tipo === "PAGO_TARDIO" ? "alerta" : "error"}>
+        <Pildora tono={TONO_INCIDENCIA[caso.tipo]}>
           {TIPO_INCIDENCIA[caso.tipo]}
         </Pildora>
         <Pildora tono={cerrado ? "exito" : caso.estado === "EN_CURSO" ? "acento" : "neutro"}>
@@ -82,9 +107,7 @@ export default async function CasoPage({
 
               <div className="border-t border-line pt-4">
                 <p className="text-sm text-ink-soft">
-                  {caso.tipo === "PAGO_TARDIO"
-                    ? "El pago entró después de que venciera la reserva, y para entonces las butacas ya habían vuelto a la venta."
-                    : "La orden figura pagada pero no tiene ninguna butaca viva."}
+                  {PORQUE[caso.tipo]}
                 </p>
               </div>
             </div>

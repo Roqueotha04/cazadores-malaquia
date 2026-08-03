@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { obtenerOrdenPorToken } from "@/lib/consultas";
 import { requerirSesion } from "@/lib/admin/sesion";
 import { reenviarEntradas } from "@/lib/admin/acciones/ordenes";
+import { anularVenta } from "@/lib/admin/acciones/ventas";
 import { ESTADO_ORDEN, ORIGEN } from "@/lib/admin/tipos";
 import { fechaCorta, precio, ubicacion } from "@/lib/formato";
 import { titularDe, type EstadoOrden } from "@/lib/tipos";
@@ -44,6 +45,12 @@ export default async function OrdenPage({
 
   const puedeReenviar = orden.estado === "PAGADA";
 
+  // Solo las ventas cargadas a mano se dan de baja: el endpoint contesta 422 a
+  // una compra de la web. `origen` es opcional en el contrato publico, asi que
+  // si no viene el boton no aparece — preferible a ofrecer una baja que el
+  // backend va a rechazar sobre una compra que si se cobro por Mercado Pago.
+  const puedeAnularse = orden.estado === "PAGADA" && orden.origen === "ADMIN";
+
   return (
     <>
       <Encabezado
@@ -70,7 +77,7 @@ export default async function OrdenPage({
           <Panel
             titulo={`Butacas (${orden.butacas.length})`}
             acciones={
-              orden.estado === "CANCELADA" ? (
+              orden.estado === "CANCELADA" || orden.estado === "ANULADA" ? (
                 <span className="text-xs text-ink-faint">
                   devueltas a la venta
                 </span>
@@ -81,9 +88,11 @@ export default async function OrdenPage({
               <Vacio titulo="Esta orden no conserva butacas">
                 {orden.estado === "CANCELADA"
                   ? "Se canceló antes de pagar y las butacas volvieron a la venta."
-                  : orden.estado === "EXPIRADA"
-                    ? "Se acabó el tiempo de la reserva y las butacas volvieron a la venta."
-                    : "Una orden pagada sin butacas es un caso para la cola: la persona pagó y no tiene dónde sentarse."}
+                  : orden.estado === "ANULADA"
+                    ? "El equipo la dio de baja y las butacas volvieron a la venta. Se había cobrado: el reintegro va a mano."
+                    : orden.estado === "EXPIRADA"
+                      ? "Se acabó el tiempo de la reserva y las butacas volvieron a la venta."
+                      : "Una orden pagada sin butacas es un caso para la cola: la persona pagó y no tiene dónde sentarse."}
               </Vacio>
             ) : (
               <ul className="divide-y divide-line">
@@ -181,6 +190,37 @@ export default async function OrdenPage({
               )}
             </div>
           </Panel>
+
+          {puedeAnularse && (
+            <Panel titulo="Dar de baja">
+              <div className="space-y-3 p-5">
+                <p className="text-sm text-ink-soft">
+                  Se anulan las {orden.butacas.length}{" "}
+                  {orden.butacas.length === 1 ? "entrada" : "entradas"} de esta
+                  venta y las butacas vuelven al mapa. La plata{" "}
+                  <strong className="text-ink">no se devuelve sola</strong>: el
+                  reintegro lo hace el equipo a mano.
+                </p>
+                <AccionConfirmada
+                  etiqueta="Dar de baja la venta"
+                  confirmar="Sí, dar de baja"
+                  accion={anularVenta.bind(null, orden.token)}
+                  motivo={{
+                    rotulo: "Por qué se da de baja",
+                    ayuda:
+                      "Queda asentado en el historial. Es lo único que después explica por qué estas butacas volvieron a estar libres.",
+                    placeholder: "Se cargó con el DNI equivocado",
+                  }}
+                  pregunta={
+                    <>
+                      Esto no se deshace. Si alguien de esta venta ya pasó por la
+                      puerta no se va a poder: esa persona está adentro.
+                    </>
+                  }
+                />
+              </div>
+            </Panel>
+          )}
         </aside>
       </div>
     </>
@@ -192,4 +232,7 @@ const TONO_ESTADO: Record<EstadoOrden, Tono> = {
   ACTIVA: "acento",
   EXPIRADA: "neutro",
   CANCELADA: "neutro",
+  // La unica de las tres terminadas que no es rutina: se cobro y hay plata que
+  // devolver. No se lee igual que una que vencio sola.
+  ANULADA: "error",
 };

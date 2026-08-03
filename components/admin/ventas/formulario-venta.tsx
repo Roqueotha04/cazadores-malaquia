@@ -21,8 +21,9 @@ const MEDIOS: MedioManual[] = ["EFECTIVO", "TRANSFERENCIA"];
  * Cargar una venta que ya se cobro afuera.
  *
  * Dos pasos en una sola pantalla: elegir butacas y datos, despues revisar. La
- * revision no es un tramite — **esto no se deshace**, no hay endpoint para
- * anular una venta manual, y lo que se carga mal queda mal.
+ * revision no es un tramite: confirmar emite las entradas y las manda por mail.
+ * Se puede dar de baja despues —`anularVenta`, desde el detalle de la orden—
+ * pero eso anula entradas que la persona ya recibio y deja un reintegro a mano.
  *
  * Va como panel de revision y no como dialogo modal a proposito: el resumen
  * tiene que poder compararse contra el plano y contra lo que quedo escrito
@@ -282,9 +283,10 @@ function Revision({
   return (
     <Panel titulo="Revisá antes de cargar">
       <div className="space-y-5 p-5">
-        <Aviso tono="alerta" titulo="Esto no se puede deshacer">
-          No hay forma de anular una venta cargada a mano. Si algo está mal,
-          queda mal.
+        <Aviso tono="alerta" titulo="Se emiten las entradas al confirmar">
+          El PDF sale por mail en el acto. Dar de baja la venta después se puede,
+          desde la orden, pero anula las entradas ya mandadas y el reintegro lo
+          hacés a mano.
         </Aviso>
 
         {error && (

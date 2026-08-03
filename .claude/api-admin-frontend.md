@@ -37,7 +37,7 @@ Cómo va la venta, en un solo pedido: es la pantalla de entrada.
 
 ```json
 {
-  "butacas": { "total": 730, "vendidas": 412, "reservadas": 18, "libres": 300, "entradasUsadas": 0 },
+  "butacas": { "total": 730, "vendidas": 412, "reservadas": 18, "libres": 300, "entradasUsadas": 0, "entradasAnuladas": 3 },
   "recaudacion": {
     "totalCentavos": 144200000,
     "porMedio": [ { "medio": "MERCADOPAGO", "totalCentavos": 129500000, "cantidad": 37 } ],
@@ -50,9 +50,13 @@ Cómo va la venta, en un solo pedido: es la pantalla de entrada.
 `vendidas` y `reservadas` no se pisan: una son entradas emitidas, la otra
 butacas agarradas sin pagar. `porMedio` trae **siempre los tres medios**
 (`MERCADOPAGO`, `EFECTIVO`, `TRANSFERENCIA`) y `ordenesPorEstado` **siempre los
-cuatro estados**, aunque estén en cero — al panel no le tienen que aparecer
+cinco estados**, aunque estén en cero — al panel no le tienen que aparecer
 renglones nuevos a medida que avanza la venta. `incidenciasPendientes` es el
 badge de la cola de casos.
+
+`entradasAnuladas` va **aparte y no se resta de nada**: la butaca de una anulada
+ya salió de `vendidas` y volvió a `libres` sola. Se muestra igual porque cada una
+es plata que hay que devolver a mano, y escondida no la reclama nadie.
 
 ---
 
@@ -100,7 +104,8 @@ en `api-frontend.md` y también piden token.
 ### `GET /api/admin/ordenes?estado=&q=`
 
 Los dos filtros son opcionales y se combinan. `estado` es `ACTIVA` | `PAGADA` |
-`EXPIRADA` | `CANCELADA`; `q` acepta DNI o apellido. Máximo **100 resultados**.
+`EXPIRADA` | `CANCELADA` | `ANULADA`; `q` acepta DNI o apellido. Máximo
+**100 resultados**.
 
 **`EXPIRADA` no está guardado en ningún lado**, se deriva del reloj al responder:
 nada en el backend recorre las órdenes vencidas para marcarlas. Las butacas sí se
@@ -213,9 +218,9 @@ y `butacas` con mesa y número de cada silla. Con ese `token` se piden el detall
 - **404**: algún `asientoId` no existe en el salón.
 
 **Es lento**: espera al servidor de correo antes de responder. Timeout de cliente
-de 30 s y el botón deshabilitado mientras tanto, porque **no se deshace**: no hay
-endpoint para anular una venta manual, así que un doble clic son dos órdenes
-cobradas. Conviene una confirmación antes de enviar.
+de 30 s y el botón deshabilitado mientras tanto, porque un doble clic son dos
+órdenes cobradas. Se pueden dar de baja (ver abajo), pero eso deja rastro y no
+devuelve la plata: conviene una confirmación antes de enviar.
 
 **La carga a mano es libre a propósito**: no valida `maxAsientosPorCompra` ni
 `ventasAbiertas`. Se puede cargar con la venta cerrada y por encima del máximo.
@@ -237,6 +242,30 @@ números de butaca no viajan acá: con el `token` se piden a
 `GET /api/ordenes/{token}`. `medio` y `montoCentavos` pueden venir en **null**
 si la venta no tiene cobro aprobado: no debería pasar, y si aparece es un dato
 roto que hay que mostrar como tal, no como cero.
+
+### `POST /api/admin/ventas/{token}/anular` → `204`
+
+```json
+{ "motivo": "Se cargo con el DNI equivocado" }
+```
+
+Da de baja la venta a mano **entera**: anula todas sus entradas, devuelve las
+butacas al mapa, deja la orden en `ANULADA` y la saca de la recaudación. **No
+devuelve la plata**: el reintegro lo hace el equipo a mano. El `motivo` sigue las
+mismas reglas que el de anular una entrada — obligatorio, hasta 500 caracteres.
+
+| Código | Cuándo |
+|---|---|
+| `204` | Salió bien. Volver a llamarla no es error |
+| `400` | Falta el motivo |
+| `404` | El token no existe |
+| `409` | Alguien de esa venta ya pasó por la puerta. No se da de baja: esa persona está adentro |
+| `422` | Es una compra de la web, no una venta cargada a mano |
+
+El `409` y el `422` se muestran con el `mensaje` de la respuesta: son
+explicativos. El panel ofrece la baja sólo cuando la orden viene con
+`origen: "ADMIN"` y estado `PAGADA`, para no poner un botón destructivo delante
+de una compra que el backend va a rechazar con 422.
 
 ---
 
@@ -300,7 +329,14 @@ primero que se hace con un caso es llamar a esa persona.
     "dni": "40123456", "celular": "...", "creadoEl": "..." } ]
 ```
 
-`tipo`: `PAGO_TARDIO` | `SIN_BUTACA`. `estado`: `ABIERTA` | `EN_CURSO`.
+`tipo`: `PAGO_TARDIO` | `SIN_BUTACA` | `BUTACAS_INCOMPLETAS` | `MONTO_DISTINTO`.
+`estado`: `ABIERTA` | `EN_CURSO`.
+
+Los dos últimos son nuevos y necesitan etiqueta propia en la cola.
+**`BUTACAS_INCOMPLETAS`** es que se cobraron 3 butacas y salieron 2 entradas: es
+lo más urgente, porque alguien llega a la puerta con una entrada de menos.
+**`MONTO_DISTINTO`** es que Mercado Pago informó un importe que no es el que se
+pidió cobrar: es una diferencia de plata y no bloquea a nadie esa noche.
 
 ### `GET /api/admin/incidencias/{id}`
 

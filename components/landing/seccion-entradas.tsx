@@ -1,26 +1,36 @@
 import Image from "next/image";
 import { BotonLink } from "@/components/ui/boton";
+import { COLCHON_PAGO_MIN } from "@/lib/constantes";
 import type { Evento } from "@/lib/tipos";
 
 const TOTAL = 730;
 
-const COMO_FUNCIONA = [
-  {
-    titulo: "Elegís tu silla en el plano",
-    texto:
-      "Ves las 14 mesas y qué sillas están libres. Tocás las que querés, hasta 10 por compra.",
-  },
-  {
-    titulo: "Te las guardamos 30 minutos",
-    texto:
-      "Mientras cargás tus datos nadie te las puede sacar. Si se te vence el tiempo, volvés a elegir.",
-  },
-  {
-    titulo: "Pagás y te llega tu entrada",
-    texto:
-      "Una entrada por silla, con tu mesa y tu lugar exacto. Guardás el link y la tenés siempre a mano.",
-  },
-];
+/**
+ * Los tres pasos, armados con los numeros del evento.
+ *
+ * Estaban escritos a mano —"30 minutos", "hasta 10 por compra"— y el backend los
+ * cambio sin que la landing se enterara. Salen del mismo lugar que el contador
+ * del flujo de compra: `minutosReserva` menos el colchon del checkout, que es el
+ * tiempo que la persona de verdad tiene.
+ */
+function comoFunciona(evento: Evento) {
+  return [
+    {
+      titulo: "Elegís tu silla en el plano",
+      texto: `Ves las 14 mesas y qué sillas están libres. Tocás las que querés, hasta ${evento.maxAsientosPorCompra} por compra.`,
+    },
+    {
+      titulo: `Te las guardamos ${evento.minutosReserva - COLCHON_PAGO_MIN} minutos`,
+      texto:
+        "Mientras cargás tus datos nadie te las puede sacar. Si se te vence el tiempo, volvés a elegir.",
+    },
+    {
+      titulo: "Pagás y te llega tu entrada",
+      texto:
+        "Una entrada por silla, con tu mesa y tu lugar exacto. Guardás el link y la tenés siempre a mano.",
+    },
+  ];
+}
 
 /**
  * Una sola columna centrada.
@@ -38,6 +48,7 @@ export function SeccionEntradas({
   disponibles: number;
 }) {
   const agotado = disponibles === 0;
+  const pasos = comoFunciona(evento);
 
   return (
     <section id="entradas" className="px-5 py-24 sm:py-32">
@@ -55,7 +66,7 @@ export function SeccionEntradas({
         {/* Los tres pasos SI son una secuencia real, y por eso van numerados.
             Los divisores de 1px salen del gap, no de bordes. */}
         <ol className="mt-14 grid gap-px overflow-hidden rounded-sm border border-line bg-line sm:grid-cols-3">
-          {COMO_FUNCIONA.map((paso, i) => (
+          {pasos.map((paso, i) => (
             <li
               key={paso.titulo}
               /* Sin translateY: en una grilla gap-px, mover la card deja ver la

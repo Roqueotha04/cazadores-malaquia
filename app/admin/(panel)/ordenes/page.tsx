@@ -172,6 +172,9 @@ const TONO_ESTADO: Record<EstadoOrden, Tono> = {
   ACTIVA: "acento",
   EXPIRADA: "neutro",
   CANCELADA: "neutro",
+  // La unica de las tres terminadas que no es rutina: se cobro y hay plata que
+  // devolver. No se lee igual que una que vencio sola.
+  ANULADA: "error",
 };
 
 function esEstado(valor: string | undefined): valor is EstadoOrden {

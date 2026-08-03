@@ -138,6 +138,12 @@ puntos** (con puntos no se encuentra a la persona en la puerta) y el email tiene
 que ser válido — los dos vuelven en `campos` si fallan. El usuario se busca por
 DNI y se crea si no existe; comprar dos veces con el mismo DNI no duplica nada.
 
+**Comprar con un DNI que ya existe no pisa los datos de esa persona**: cada
+compra guarda su propio contacto, congelado en el momento. La misma persona puede
+comprar dos veces con mails distintos y cada compra llega a donde se hizo. Antes
+no era así, y era un agujero: se podían desviar entradas ajenas sabiendo sólo un
+DNI.
+
 `asientoIds` no puede venir vacío. Los ids repetidos se cuentan una sola vez
 contra el límite: mandar diez veces la misma butaca es una butaca.
 
@@ -158,7 +164,9 @@ Respuesta — `OrdenResponse`, el mismo cuerpo que devuelven el GET y
 }
 ```
 
-`estado`: `ACTIVA` | `PAGADA` | `EXPIRADA` | `CANCELADA`.
+`estado`: `ACTIVA` | `PAGADA` | `EXPIRADA` | `CANCELADA` | `ANULADA`.
+`ANULADA` no es lo mismo que `CANCELADA`: cancelar lo hace el comprador con algo
+que nunca se pagó, anular lo hace el equipo con algo que sí se cobró.
 `expiraEn` es contra qué corre el contador de la pantalla de pago. Cuando la
 orden queda pagada pasa a `null` — la reserva ya no vence nunca.
 `precioUnitarioCentavos` queda congelado al crear la orden: si el precio del
@@ -168,6 +176,19 @@ comprador. `totalCentavos` es unitario × butacas, no se guarda.
 Errores: **400** si faltan datos o el límite de butacas se pasa; **409** si las
 ventas están cerradas o si alguna butaca ya fue tomada — en ese caso viene
 `asientosOcupados` con los ids, y lo correcto es refrescar el mapa y marcarlos.
+
+**429** si ese DNI ya tiene **3 compras sin pagar** abiertas (sólo cuentan las que
+todavía no vencieron):
+
+```json
+{ "status": 429, "mensaje": "Ya tenes 3 compras sin pagar. Termina o cancela alguna antes de empezar otra" }
+```
+
+Es el único error de la API que significa "reintentá más tarde" y no "corregí lo
+que mandaste": el pedido está bien y las butacas pueden estar libres. Cancelar una
+compra libera el cupo al instante, no hay que esperar a que venza. El front lo
+trata aparte de los errores de validación (`tope` en `EstadoFormulario`) para no
+mandar a revisar campos que no tienen nada malo.
 
 ### `GET /api/ordenes/{token}`
 
@@ -257,9 +278,19 @@ dice. **404** si el código no existe.
 
 ### `POST /api/entradas/{codigo}/anular` → `204`
 
+```json
+{ "motivo": "El invitado aviso que no viene" }
+```
+
 Da de baja la entrada y devuelve la butaca a la venta. Es idempotente: anular dos
 veces no es error. **409** si la entrada ya se usó — esa persona está adentro y
 liberar su silla la pondría a la venta con alguien sentado.
+
+El `motivo` es **obligatorio**: no puede ir vacío ni en blanco, máximo 500
+caracteres, y sin él es **400** con el detalle en `campos.motivo`. Queda guardado
+en el historial. Anular **no devuelve la plata** —el reintegro lo hace el equipo a
+mano— así que ese texto es lo único que después explica por qué esa butaca volvió
+al mapa: va como textarea con contexto, no como un campo vacío.
 
 ---
 

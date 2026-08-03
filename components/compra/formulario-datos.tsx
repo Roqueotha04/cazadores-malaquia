@@ -1,11 +1,17 @@
 "use client";
 
-import { useActionState, useEffect, useRef } from "react";
+import {
+  useActionState,
+  useEffect,
+  useRef,
+  useSyncExternalStore,
+} from "react";
 import Link from "next/link";
 import { Boton } from "@/components/ui/boton";
 // Se renombra: acá `campo` ya es cada entrada de CAMPOS.
 import { campo as campoClases } from "@/components/ui/clases";
 import { enviarCompra, type EstadoFormulario } from "@/lib/acciones/compra";
+import { tokenGuardado } from "@/lib/orden-guardada";
 
 const CAMPOS = [
   {
@@ -47,13 +53,29 @@ const CAMPOS = [
   },
 ];
 
-export function FormularioDatos({ asientos }: { asientos: number[] }) {
+/** Referencia estable: `useSyncExternalStore` la compara entre renders. */
+const noCambia = () => () => {};
+
+export function FormularioDatos({
+  asientos,
+  minutosReserva,
+}: {
+  asientos: number[];
+  minutosReserva: number;
+}) {
   const [estado, accion, enviando] = useActionState<EstadoFormulario, FormData>(
     enviarCompra,
     {},
   );
 
   const alerta = useRef<HTMLDivElement>(null);
+
+  // El token de la última compra vive en `localStorage`, que en el servidor no
+  // existe: leerlo en el cuerpo del render desincroniza la hidratación. En el
+  // servidor devuelve null —el aviso arranca sin link y lo suma al hidratar— y
+  // no se suscribe a nada porque nadie lo escribe mientras esta pantalla está
+  // abierta: se escribe recién al llegar a la reserva.
+  const ultima = useSyncExternalStore(noCambia, tokenGuardado, () => null);
 
   // El error general vive arriba de todo: si la persona estaba en el último
   // campo, sin esto no lo ve nunca.
@@ -70,9 +92,35 @@ export function FormularioDatos({ asientos }: { asientos: number[] }) {
           ref={alerta}
           tabIndex={-1}
           role="alert"
-          className="mb-7 rounded-sm border border-error/50 bg-error/10 px-4 py-3.5"
+          /* El tope de compras abiertas no es un error de lo que escribió: los
+             datos están bien. Va en ámbar, como un "todavía no", y no en rojo
+             junto a los campos que no tienen nada que corregir. */
+          className={`mb-7 rounded-sm border px-4 py-3.5 ${
+            estado.tope
+              ? "border-alerta/50 bg-alerta/10"
+              : "border-error/50 bg-error/10"
+          }`}
         >
           <p className="text-sm font-medium text-ink">{estado.error}</p>
+
+          {estado.tope && (
+            <>
+              <p className="mt-2 text-sm text-ink-soft">
+                Cancelar una libera el lugar en el acto, no hay que esperar.
+                {!ultima &&
+                  ` Si no las tenés a mano, las que no se paguen se sueltan solas en menos de ${minutosReserva} minutos.`}
+              </p>
+              {ultima && (
+                <Link
+                  href={`/reserva/${ultima}`}
+                  className="mt-2 inline-block text-sm font-semibold text-brass underline decoration-brass/40 underline-offset-4 hover:decoration-brass"
+                >
+                  Ir a tu última compra sin pagar
+                </Link>
+              )}
+            </>
+          )}
+
           {estado.ocupadas && (
             <Link
               href={`/comprar?asientos=${asientos.join(",")}`}

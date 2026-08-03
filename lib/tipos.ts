@@ -5,7 +5,19 @@
 // /reserva/{token} porque es la que el comprador tiene guardada.
 
 export type EstadoAsiento = "DISPONIBLE" | "RESERVADO" | "VENDIDO";
-export type EstadoOrden = "ACTIVA" | "PAGADA" | "EXPIRADA" | "CANCELADA";
+
+/**
+ * `ANULADA` no es lo mismo que `CANCELADA`, aunque las dos terminen con las
+ * butacas de vuelta en el mapa: cancelar lo hace el comprador con algo que nunca
+ * se pago, anular lo hace el equipo con algo que si se cobro. La diferencia es
+ * plata que hay que devolver a mano.
+ */
+export type EstadoOrden =
+  | "ACTIVA"
+  | "PAGADA"
+  | "EXPIRADA"
+  | "CANCELADA"
+  | "ANULADA";
 
 /** `WEB` es la compra del cliente; `ADMIN`, la que cargo el equipo a mano. */
 export type OrigenOrden = "WEB" | "ADMIN";

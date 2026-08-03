@@ -30,7 +30,7 @@ export default async function TableroPage() {
   const { butacas, recaudacion, incidenciasPendientes } =
     await obtenerResumen();
 
-  // El backend manda siempre los tres medios y los cuatro estados, aunque esten
+  // El backend manda siempre los tres medios y los cinco estados, aunque esten
   // en cero. Igual se ordenan acá: la lista se lee siempre en el mismo orden, y
   // si algun dia llegara incompleta no desaparecen renglones de la pantalla.
   const porMedio = MEDIOS.map((medio) => ({
@@ -71,7 +71,8 @@ export default async function TableroPage() {
               : `Hay ${incidenciasPendientes} casos sin resolver`}
           </p>
           <p className="mt-1 text-sm text-ink-soft">
-            Son compras pagadas que quedaron sin butaca. Cada una es alguien
+            Compras cobradas que quedaron mal: sin butaca, con menos entradas de
+            las que se pagaron, o por un monto que no cierra. Cada una es alguien
             esperando que lo llamen. →
           </p>
         </Link>
@@ -109,7 +110,7 @@ export default async function TableroPage() {
             venta cuando se le acaba el tiempo.
           </p>
 
-          <div className="mt-6 grid gap-5 sm:grid-cols-3">
+          <div className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
             <Cifra
               rotulo="Butacas del salón"
               valor={String(butacas.total)}
@@ -124,6 +125,19 @@ export default async function TableroPage() {
               rotulo="Entraron al salón"
               valor={String(butacas.entradasUsadas)}
               nota="Entradas escaneadas en la puerta"
+            />
+            {/* Fuera de la barra a proposito: no se resta de nada. La butaca de
+                una anulada ya salio de vendidas y volvio a libres sola. Se
+                muestra igual porque cada una es plata a devolver a mano, y
+                escondida no la reclama nadie. */}
+            <Cifra
+              rotulo="Entradas anuladas"
+              valor={String(butacas.entradasAnuladas)}
+              nota={
+                butacas.entradasAnuladas === 0
+                  ? "Ninguna dada de baja"
+                  : "Dadas de baja. Cada una es un reintegro a mano"
+              }
             />
           </div>
         </div>
@@ -194,4 +208,5 @@ const LEYENDA_ESTADO: Record<EstadoOrden, string> = {
   PAGADA: "Con entradas emitidas",
   EXPIRADA: "Se acabó el tiempo y soltaron las butacas",
   CANCELADA: "El comprador volvió atrás antes de pagar",
+  ANULADA: "El equipo la dio de baja después de cobrada. El reintegro va a mano",
 };

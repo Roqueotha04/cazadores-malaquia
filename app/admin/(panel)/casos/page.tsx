@@ -4,6 +4,7 @@ import {
   ESTADO_INCIDENCIA,
   TIPO_INCIDENCIA,
   type Incidencia,
+  type TipoIncidencia,
 } from "@/lib/admin/tipos";
 import { fechaCorta } from "@/lib/formato";
 import { Refresco } from "@/components/admin/ui/refresco";
@@ -12,9 +13,22 @@ import {
   Panel,
   Pildora,
   Vacio,
+  type Tono,
 } from "@/components/admin/ui/piezas";
 
 export const metadata = { title: "Casos" };
+
+/**
+ * Rojo para los dos que dejan a alguien parado en la puerta —sin butaca, o con
+ * menos entradas de las que pago— y ambar para los que son plata mal contada
+ * pero no bloquean a nadie esa noche.
+ */
+const TONO_INCIDENCIA: Record<TipoIncidencia, Tono> = {
+  SIN_BUTACA: "error",
+  BUTACAS_INCOMPLETAS: "error",
+  PAGO_TARDIO: "alerta",
+  MONTO_DISTINTO: "alerta",
+};
 
 /**
  * Compras pagadas que quedaron sin butaca.
@@ -30,7 +44,7 @@ export default async function CasosPage() {
     <>
       <Encabezado
         titulo="Cola de casos"
-        bajada="Gente que pagó y se quedó sin lugar: el pago entró tarde y la reserva ya había vencido. Los abre el sistema solo, al confirmar pagos."
+        bajada="Compras cobradas que quedaron mal: sin butaca, con menos entradas de las que se pagaron, o por un monto que no cierra. Los abre el sistema solo, al confirmar pagos."
       >
         <Refresco cada={120} />
       </Encabezado>
@@ -39,8 +53,8 @@ export default async function CasosPage() {
         <Panel>
           <Vacio titulo="No hay casos sin resolver">
             Esto es lo que se espera ver: quiere decir que todas las compras
-            pagadas tienen su butaca. Cuando un pago entre tarde, el caso va a
-            aparecer acá solo.
+            pagadas tienen sus butacas y por el monto correcto. Cuando alguna no
+            cierre, el caso va a aparecer acá solo.
           </Vacio>
         </Panel>
       ) : (
@@ -76,7 +90,7 @@ function FichaCaso({ caso }: { caso: Incidencia }) {
         </div>
 
         <div className="flex shrink-0 flex-wrap items-center gap-2">
-          <Pildora tono={caso.tipo === "PAGO_TARDIO" ? "alerta" : "error"}>
+          <Pildora tono={TONO_INCIDENCIA[caso.tipo]}>
             {TIPO_INCIDENCIA[caso.tipo]}
           </Pildora>
           <Pildora tono={caso.estado === "EN_CURSO" ? "acento" : "neutro"}>

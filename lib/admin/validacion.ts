@@ -44,14 +44,38 @@ export const ventaManualSchema = z.object({
  */
 export const corregirUsuarioSchema = z.object(contactoComprador);
 
-/** La nota con la que se cierra un caso sin reubicar. */
-export const notaSchema = z
-  .string()
-  .trim()
-  .min(1, "Contá qué pasó: un caso cerrado sin nota no se puede reconstruir")
-  .max(500, "Máximo 500 caracteres");
-
+/**
+ * Los textos que quedan asentados en el historial.
+ *
+ * Misma forma —obligatorio, sin espacios al borde, hasta 500— y distinto porque:
+ * la nota cierra un caso, el motivo da de baja algo que ya se cobro. Los dos son
+ * lo unico que despues explica una decision que no se puede deshacer, asi que
+ * ninguno de los dos puede ir vacio.
+ */
 export const LARGO_NOTA = 500;
+
+function textoDeHistorial(faltante: string) {
+  return z
+    .string()
+    .trim()
+    .min(1, faltante)
+    .max(LARGO_NOTA, `Máximo ${LARGO_NOTA} caracteres`);
+}
+
+/** La nota con la que se cierra un caso sin reubicar. */
+export const notaSchema = textoDeHistorial(
+  "Contá qué pasó: un caso cerrado sin nota no se puede reconstruir",
+);
+
+/**
+ * El porqué de una baja: una entrada anulada o una venta a mano dada de baja.
+ *
+ * Anular no devuelve plata —el reintegro lo hace el equipo a mano— asi que este
+ * texto es lo unico que despues explica por que esa butaca volvio al mapa.
+ */
+export const motivoSchema = textoDeHistorial(
+  "Escribí por qué se da de baja: es lo único que después explica esa butaca vacía",
+);
 
 export const resolverSchema = z.object({ nota: notaSchema });
 

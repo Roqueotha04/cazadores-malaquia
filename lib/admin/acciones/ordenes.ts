@@ -15,9 +15,12 @@ import { corregirUsuarioSchema } from "../validacion";
 /**
  * Reenvia el PDF de las entradas a la direccion que tiene el comprador.
  *
- * El del cliente (`POST /api/ordenes/reenviar`) pide DNI y email y calla lo que
- * encontro; este avisa cuando algo no cierra, porque del otro lado hay alguien
- * atendiendo un telefono y necesita poder decir por que no salio.
+ * El del cliente (`POST /api/ordenes/reenviar`) pide DNI y **el email con el que
+ * se hizo esa compra** —el contacto quedo congelado en la orden, asi que un mail
+ * nuevo no encuentra nada— y contesta 204 igual aunque no encuentre, para que no
+ * sirva para averiguar quien compro. Este avisa cuando algo no cierra, porque
+ * del otro lado hay alguien atendiendo un telefono y necesita poder decir por
+ * que no salio.
  *
  * Espera al servidor de correo: por eso el timeout largo.
  */

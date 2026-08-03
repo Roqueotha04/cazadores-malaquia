@@ -160,6 +160,12 @@ function Entrada({ entrada }: { entrada: EntradaInvitado }) {
             tono="fantasma"
             medida="base"
             accion={anularEntrada.bind(null, entrada.codigo)}
+            motivo={{
+              rotulo: "Por qué se anula",
+              ayuda:
+                "Queda asentado. Anular no devuelve la plata: el reintegro lo hace el equipo a mano, y esto es lo único que después explica por qué.",
+              placeholder: "El invitado avisó que no viene",
+            }}
             pregunta={
               <>
                 La butaca{" "}

@@ -1,7 +1,16 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition, type ReactNode } from "react";
+import {
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  useTransition,
+  type ReactNode,
+} from "react";
 import { Boton } from "@/components/ui/boton";
+import { LARGO_NOTA } from "@/lib/admin/validacion";
+import { AreaTexto } from "./campos";
 import { Aviso } from "./piezas";
 
 /**
@@ -22,6 +31,7 @@ export function AccionConfirmada({
   tono = "secundario",
   medida = "chico",
   accion,
+  motivo,
   deshabilitada = false,
   flotante = false,
 }: {
@@ -30,8 +40,20 @@ export function AccionConfirmada({
   confirmar?: string;
   tono?: "principal" | "secundario" | "fantasma";
   medida?: "base" | "chico";
-  /** Nunca lanza: devuelve el error como valor, igual que el resto. */
-  accion: () => Promise<{ ok: boolean; error?: string }>;
+  /**
+   * Nunca lanza: devuelve el error como valor, igual que el resto.
+   *
+   * Recibe el motivo tipeado cuando la accion lo pide, y nada cuando no.
+   */
+  accion: (motivo: string) => Promise<{ ok: boolean; error?: string }>;
+  /**
+   * Pide un porque antes de dejar confirmar.
+   *
+   * Presente, la pregunta suma un textarea obligatorio y el boton no se habilita
+   * hasta que tenga texto. Es para las bajas que el backend asienta en el
+   * historial: sin ese texto, la butaca vuelve al mapa y nadie sabe por que.
+   */
+  motivo?: { rotulo: string; ayuda: string; placeholder: string };
   deshabilitada?: boolean;
   /**
    * La pregunta sale flotando en vez de empujar lo de abajo.
@@ -43,9 +65,19 @@ export function AccionConfirmada({
   flotante?: boolean;
 }) {
   const [preguntando, setPreguntando] = useState(false);
+  const [texto, setTexto] = useState("");
   const [error, setError] = useState("");
   const [trabajando, empezar] = useTransition();
   const disparador = useRef<HTMLButtonElement>(null);
+  // En la puerta hay uno de estos por entrada en la misma pantalla: el id del
+  // textarea tiene que ser distinto en cada uno o el `<label>` apunta al primero.
+  const idMotivo = useId();
+
+  const restantes = LARGO_NOTA - texto.length;
+  // Sin motivo pedido, nada bloquea. Con motivo, el boton espera a que haya algo
+  // escrito: el backend rechaza el vacio igual, y enterarse recien despues del
+  // viaje es peor.
+  const falta = !!motivo && (texto.trim().length === 0 || restantes < 0);
 
   useEffect(() => {
     if (!preguntando || !flotante) return;
@@ -65,7 +97,7 @@ export function AccionConfirmada({
     setError("");
 
     empezar(async () => {
-      const resultado = await accion();
+      const resultado = await accion(texto.trim());
 
       if (!resultado.ok) {
         // El mensaje del backend se muestra tal cual: esta escrito para leerse.
@@ -74,17 +106,36 @@ export function AccionConfirmada({
       }
 
       setPreguntando(false);
+      setTexto("");
     });
   }
 
   function cancelar() {
     setPreguntando(false);
+    setTexto("");
     setError("");
   }
 
   const cuerpo = (
     <>
       <div className="text-sm text-ink-soft">{pregunta}</div>
+
+      {motivo && (
+        <AreaTexto
+          id={idMotivo}
+          rotulo={motivo.rotulo}
+          required
+          maxLength={LARGO_NOTA}
+          value={texto}
+          onChange={(e) => setTexto(e.target.value)}
+          disabled={trabajando}
+          placeholder={motivo.placeholder}
+          error={
+            restantes < 0 ? `Te pasaste por ${Math.abs(restantes)}` : undefined
+          }
+          ayuda={motivo.ayuda}
+        />
+      )}
 
       {error && <Aviso>{error}</Aviso>}
 
@@ -93,7 +144,7 @@ export function AccionConfirmada({
           medida={medida}
           onClick={ejecutar}
           cargando={trabajando}
-          disabled={trabajando}
+          disabled={trabajando || falta}
         >
           {trabajando ? "Un momento…" : confirmar}
         </Boton>

@@ -20,7 +20,18 @@ export type MedioManual = Extract<MedioPago, "EFECTIVO" | "TRANSFERENCIA">;
 // lo importan de acá.
 export type { OrigenOrden };
 
-export type TipoIncidencia = "PAGO_TARDIO" | "SIN_BUTACA";
+/**
+ * Los cuatro motivos por los que se abre un caso.
+ *
+ * Los dos primeros dejan a alguien sin lugar; `BUTACAS_INCOMPLETAS` deja a
+ * alguien con menos entradas de las que pago —llega a la puerta y falta una— y
+ * `MONTO_DISTINTO` es una diferencia de plata que no bloquea a nadie.
+ */
+export type TipoIncidencia =
+  | "PAGO_TARDIO"
+  | "SIN_BUTACA"
+  | "BUTACAS_INCOMPLETAS"
+  | "MONTO_DISTINTO";
 export type EstadoIncidencia = "ABIERTA" | "EN_CURSO";
 
 /** El de arriba a la derecha. `GET /api/auth/yo`. */
@@ -34,7 +45,7 @@ export type Cuenta = {
 /**
  * `GET /api/admin/resumen`.
  *
- * `porMedio` trae siempre los tres medios y `ordenesPorEstado` los cuatro
+ * `porMedio` trae siempre los tres medios y `ordenesPorEstado` los cinco
  * estados, aunque esten en cero: al panel no le tienen que aparecer renglones
  * nuevos a medida que avanza la venta.
  */
@@ -47,6 +58,12 @@ export type Resumen = {
     reservadas: number;
     libres: number;
     entradasUsadas: number;
+    /**
+     * Entradas dadas de baja. **No se resta de nada**: la butaca de una anulada
+     * ya salio de `vendidas` y volvio a `libres` sola. Va aparte porque cada una
+     * es plata que hay que devolver a mano, y escondida no la reclama nadie.
+     */
+    entradasAnuladas: number;
   };
   recaudacion: {
     totalCentavos: number;
@@ -207,6 +224,7 @@ export const ESTADO_ORDEN: Record<EstadoOrden, string> = {
   PAGADA: "Pagada",
   EXPIRADA: "Expirada",
   CANCELADA: "Cancelada",
+  ANULADA: "Anulada",
 };
 
 export const ORIGEN: Record<OrigenOrden, string> = {
@@ -217,6 +235,8 @@ export const ORIGEN: Record<OrigenOrden, string> = {
 export const TIPO_INCIDENCIA: Record<TipoIncidencia, string> = {
   PAGO_TARDIO: "Pago tardío",
   SIN_BUTACA: "Sin butaca",
+  BUTACAS_INCOMPLETAS: "Faltan butacas",
+  MONTO_DISTINTO: "Monto distinto",
 };
 
 export const ESTADO_INCIDENCIA: Record<EstadoIncidencia, string> = {
@@ -236,4 +256,5 @@ export const ESTADOS_ORDEN: EstadoOrden[] = [
   "PAGADA",
   "EXPIRADA",
   "CANCELADA",
+  "ANULADA",
 ];
