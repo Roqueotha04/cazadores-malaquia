@@ -14,23 +14,16 @@ export function BarraFlujo() {
         <Link
           href="/"
           className="flex items-center gap-3"
-          aria-label="Armería Bonifacio Malaquía, ir al inicio"
+          aria-label="Cena de Cazadores y Tiradores, ir al inicio"
         >
-          <Image
-            src={logo}
-            alt=""
-            width={36}
-            height={36}
-            className="size-9"
-            priority
-          />
+          <Image src={logo} alt="" className="h-9 w-auto" priority />
           <span className="font-display text-sm text-ink sm:text-base">
-            Cena de Cazadores 2026
+            Cena de Cazadores y Tiradores
           </span>
         </Link>
 
         <p className="hidden text-xs text-ink-faint sm:block">
-          Compra segura · Armería Bonifacio Malaquía
+          Compra segura · Bonifacio Malaquía
         </p>
       </div>
     </header>

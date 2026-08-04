@@ -31,7 +31,7 @@ export default async function LoginPage({
       <div className="w-full max-w-sm">
         <h1 className="text-2xl">Panel</h1>
         <p className="mt-1.5 text-sm text-ink-soft">
-          Cena de Cazadores · Armería Bonifacio Malaquía
+          Cena de Cazadores y Tiradores · Bonifacio Malaquía
         </p>
 
         {vencida === "1" && (
