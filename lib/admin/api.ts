@@ -21,7 +21,7 @@ import { requerirSesion } from "./sesion";
 /**
  * Los cuatro endpoints que mandan mail —`reenviar-entradas`, `cambiar-butaca`,
  * `POST /ventas` y `reubicar`— esperan al servidor de correo. Para el resto, los
- * 8 segundos de `lib/api.ts` sobran.
+ * 15 segundos de `lib/api.ts` sobran.
  */
 export const TIMEOUT_MAIL_MS = 30_000;
 

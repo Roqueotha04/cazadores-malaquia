@@ -37,12 +37,13 @@ app/
 ├── (flujo)/      ── PRODUCT ── el embudo, con barra de progreso en el layout
 │   ├── comprar/                plano del salón → datos/ (nombre, DNI, email, celular)
 │   ├── reserva/[token]/        estado de la reserva + contador + botón de pagar
-│   ├── compra/resultado/       la vuelta del checkout de Mercado Pago
-│   └── entradas/[token]/       entradas emitidas (post-pago)
+│   ├── checkout/               la vuelta de Mercado Pago: exito|error|pendiente/[[...token]]
+│   └── entradas/[token]/       entradas emitidas (post-pago) + entradas.pdf/ (el PDF del back)
 │
 └── admin/        ── PANEL ──   una sola cuenta compartida
     ├── login/ · salir/         `salir` es un route handler: borra la cookie
     └── (panel)/                tablero + ordenes/ ventas/ puerta/ evento/ casos/
+                                y errores/ — cobros mal contados y mails que no salieron
 
 components/
 ├── landing/    hero, navbar, footer, sobre-nosotros, contacto, formulario-contacto
@@ -74,7 +75,8 @@ Docs en la raíz: README.md · PRODUCT.md · LOGICA-BACKEND.md · AGENTS.md
 .claude/
 ├── PROYECTO.md            spec original (⚠️ arquitectura vieja, ver nota arriba)
 ├── api-frontend.md        contrato API pública — lo que el front de venta espera
-└── api-admin-frontend.md  contrato API admin — lo que el panel espera
+├── api-admin-frontend.md  contrato API admin — lo que el panel espera
+└── seguridad-api.md       los cambios de las fases 1 a 5 del backend, ya aplicados
 ```
 
 **Lo que no viene al clonar** (está en `.gitignore`): `.claude/skills/`,
@@ -99,8 +101,10 @@ Navegador ──→ Next.js (server components + server actions)
 - **El navegador nunca habla con el backend ni con Supabase.** Todo pasa por el
   servidor de Next.js. No hay claves en el bundle del cliente.
 - **`lib/api.ts` es el único `fetch`** al backend. Exporta `pedir` (lectura,
-  lanza en error), `pedirOpcional` (devuelve null en 404), y `enviar`
-  (escritura, nunca lanza — devuelve el error como valor para `useActionState`).
+  lanza en error), `pedirOpcional` (devuelve null en 404), `enviar`
+  (escritura, nunca lanza — devuelve el error como valor para `useActionState`)
+  y `pedirArchivo` (binario: devuelve la `Response` cruda; hoy sólo el PDF de
+  las entradas, que se reenvía desde `/entradas/[token]/entradas.pdf`).
 - **`connection()`** se llama en cada request para evitar prerenderizado (los
   datos cambian con cada compra).
 - **Sin `API_URL`** en el entorno, el build corre pero las pantallas fallan al
@@ -111,8 +115,14 @@ Navegador ──→ Next.js (server components + server actions)
 ```
 Landing → /comprar (plano, elegir sillas) → /comprar/datos (formulario)
 → POST /api/ordenes (reserva 30 min) → /reserva/{token} (contador + pagar)
-→ Mercado Pago checkout → webhook confirma → /entradas/{token}
+→ Mercado Pago checkout → /checkout/exito/{token} (reconciliar)
+→ /entradas/{token} (+ el PDF, si quedó PAGADA)
 ```
+
+Las tres back-urls (`/checkout/exito|error|pendiente/{token}`) las arma el
+backend con el token adentro: **son un acuerdo entre los dos repos**, si cambian
+acá hay que avisar del otro lado. El querystring que agrega Mercado Pago no se
+lee nunca; quien decide si el pago entró es `/reconciliar`.
 
 ### Autenticación del admin
 
@@ -323,13 +333,15 @@ Contrato: `.claude/api-frontend.md`, en `POST /api/ordenes/{token}/pagar`.
 
 ### Los endpoints lentos piden 30 segundos
 
-El default son 8 s (`TIMEOUT_MS` en `lib/api.ts`), que alcanza para lo que solo
-toca la base. **Toda llamada que dispare un mail o hable con Mercado Pago tiene
-que pasar `{ timeoutMs: 30_000 }`** — en el panel, `TIMEOUT_MAIL_MS` de
-`lib/admin/api.ts`. Hoy son seis: `/pagar` y `/reconciliar` del front de venta, y
-`reenviar-entradas`, `cambiar-butaca`, `POST /ventas` y `reubicar` del panel.
+El default son 15 s (`TIMEOUT_MS` en `lib/api.ts`), que alcanza para lo que solo
+toca la base —incluida la primera consulta despues de un rato, cuando el pool de
+Supabase tiene que abrir conexión. **Toda llamada que dispare un mail o hable con
+Mercado Pago tiene que pasar `{ timeoutMs: 30_000 }`** — en el panel,
+`TIMEOUT_MAIL_MS` de `lib/admin/api.ts`. Hoy son seis: `/pagar` y `/reconciliar`
+del front de venta, y `reenviar-entradas`, `cambiar-butaca`, `POST /ventas` y
+`reubicar` del panel.
 
-Si se olvida, el backend hace el trabajo bien pero el front corta a los 8 s y
+Si se olvida, el backend hace el trabajo bien pero el front corta a los 15 s y
 muestra "no pudimos conectar": el admin reintenta y **el invitado recibe el mail
 dos veces**. En local no se ve nunca, porque el mail sale en milisegundos.
 

@@ -8,6 +8,8 @@ import type {
   Caso,
   CasoJson,
   Cuenta,
+  ErrorOperativo,
+  ErrorOperativoJson,
   EstadoIncidencia,
   Incidencia,
   IncidenciaJson,
@@ -177,13 +179,51 @@ export async function obtenerCaso(id: number): Promise<Caso | null> {
 /**
  * Cuantas butacas tiene que devolverle la reubicacion a esta persona.
  *
- * El backend deriva la cantidad del cobro y no la manda en ningun campo: si no
- * coincide, contesta 422 diciendo cuantas pago y cuantas se mandaron. Esto es
- * una pista para no llegar hasta ahi —el detalle trae las butacas que habia
- * elegido y perdio, incluidas las liberadas— pero la verdad la dice el 422.
+ * **Es una pista, no la verdad.** El backend deriva la cantidad del cobro y no
+ * la manda en ningun campo: si no coincide, contesta 422 diciendo cuantas pago y
+ * cuantas se mandaron, y ese mensaje es mas exacto que cualquier cuenta de este
+ * lado. Por eso la pantalla la muestra pero no la usa para bloquear nada.
+ *
+ * Se calcula como el backend: plata cobrada dividida el precio que se le
+ * congelo a esa orden. Solo vale si divide exacto — `MONTO_DISTINTO` es
+ * justamente el caso en que Mercado Pago informo un importe que no es el que se
+ * pidio cobrar, y ahi la division no cierra. Cuando no cierra, o cuando todavia
+ * no hay cobro aprobado, cae en las butacas que la orden conserva.
+ *
+ * Contar las butacas no alcanza solo: en `SIN_BUTACA` son cero y en
+ * `BUTACAS_INCOMPLETAS` son menos de las que se pagaron.
  */
 export function butacasEsperadas(caso: Caso): number {
+  const precio = caso.orden.precioUnitarioCentavos;
+  const cobrado = caso.pago?.montoCentavos ?? 0;
+
+  if (precio > 0 && cobrado > 0 && cobrado % precio === 0) {
+    return cobrado / precio;
+  }
+
   return caso.orden.butacas.length;
+}
+
+/**
+ * Lo que se rompio del lado del servidor y necesita una mano.
+ *
+ * No son casos: los tres `COBRO_*` son plata que hay que devolver, y un
+ * `MAIL_NO_ENVIADO` es alguien que pago y no tiene sus entradas.
+ *
+ * **Llega ordenado y no se reordena acá**: urgentes arriba y, dentro de cada
+ * gravedad, lo mas nuevo primero. Con `pendientes` en false vienen tambien los
+ * ya atendidos.
+ */
+export async function obtenerErrores(pendientes = true): Promise<ErrorOperativo[]> {
+  const errores = await pedirAdmin<ErrorOperativoJson[]>(
+    `/api/admin/errores?pendientes=${pendientes}`,
+  );
+
+  return errores.map((error) => ({
+    ...error,
+    ocurrioEl: aFecha(error.ocurrioEl),
+    atendidoEl: aFecha(error.atendidoEl),
+  }));
 }
 
 /** Un caso ya cerrado no admite tomar, reubicar ni resolver: contesta 422. */

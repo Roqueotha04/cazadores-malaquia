@@ -21,18 +21,22 @@ const SECCIONES = [
   { href: "/admin/puerta", nombre: "Puerta" },
   { href: "/admin/ordenes", nombre: "Órdenes" },
   { href: "/admin/ventas", nombre: "Ventas a mano" },
-  { href: "/admin/casos", nombre: "Casos", conBadge: true },
+  { href: "/admin/casos", nombre: "Casos", badge: "casos" },
+  { href: "/admin/errores", nombre: "Errores", badge: "errores" },
   { href: "/admin/evento", nombre: "Evento" },
 ] as const;
 
+/** Lo que cuelga de una seccion: casos sin resolver, errores sin atender. */
+export type Badges = { casos: ReactNode; errores: ReactNode };
+
 export function Shell({
-  badge,
+  badges,
   cuenta,
   venta,
   children,
 }: {
-  /** Cuantos casos hay sin resolver. Server Component en Suspense. */
-  badge: ReactNode;
+  /** Server Components en Suspense: el shell no arrastra ninguna consulta. */
+  badges: Badges;
   cuenta: ReactNode;
   /** Estado de la venta y su interruptor. */
   venta: ReactNode;
@@ -63,7 +67,7 @@ export function Shell({
       <aside className="hidden w-56 shrink-0 border-r border-line bg-surface-sunken lg:block">
         <div className="sticky top-0 flex h-dvh flex-col">
           <Marca />
-          <Navegacion ruta={ruta} badge={badge} />
+          <Navegacion ruta={ruta} badges={badges} />
           <PieNavegacion />
         </div>
       </aside>
@@ -85,7 +89,7 @@ export function Shell({
                 la pantalla nueva obliga a un toque de mas en cada salto. */}
             <Navegacion
               ruta={ruta}
-              badge={badge}
+              badges={badges}
               alNavegar={() => setAbierto(false)}
             />
             <PieNavegacion />
@@ -110,7 +114,13 @@ export function Shell({
             </span>
           </button>
 
-          <p className="truncate font-sans text-sm font-semibold text-ink lg:hidden">
+          {/* Debajo de 640px no va. Entre el boton del cajon y los dos de la
+              derecha —"Cerrar venta" y "Salir"— quedaban unos veinte pixeles:
+              el titulo no desbordaba, se recortaba hasta ser una letra y unos
+              puntos suspensivos, que informa menos que no estar. Y no hace
+              falta: el <h1> de la pantalla esta 24px mas abajo y dice lo mismo.
+              De 640 para arriba sobra ancho y vuelve. */}
+          <p className="hidden min-w-0 truncate font-sans text-sm font-semibold text-ink sm:block lg:hidden">
             {SECCIONES.find((s) => esActiva(ruta, s.href))?.nombre ?? "Panel"}
           </p>
 
@@ -140,11 +150,11 @@ function Marca() {
 
 function Navegacion({
   ruta,
-  badge,
+  badges,
   alNavegar,
 }: {
   ruta: string;
-  badge: ReactNode;
+  badges: Badges;
   alNavegar?: () => void;
 }) {
   return (
@@ -170,7 +180,7 @@ function Navegacion({
                 ].join(" ")}
               >
                 {seccion.nombre}
-                {"conBadge" in seccion && seccion.conBadge && badge}
+                {"badge" in seccion && badges[seccion.badge]}
               </Link>
             </li>
           );

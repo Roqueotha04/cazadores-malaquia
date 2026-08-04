@@ -27,7 +27,7 @@ export const metadata = { title: "Tablero" };
  * viaje, para que abrir el panel no dependa de que seis endpoints contesten.
  */
 export default async function TableroPage() {
-  const { butacas, recaudacion, incidenciasPendientes } =
+  const { butacas, recaudacion, incidenciasPendientes, erroresPendientes } =
     await obtenerResumen();
 
   // El backend manda siempre los tres medios y los cinco estados, aunque esten
@@ -59,6 +59,27 @@ export default async function TableroPage() {
       >
         <Refresco cada={60} />
       </Encabezado>
+
+      {/* Arriba de los casos y en rojo, no en ambar: un caso es alguien
+          esperando que lo llamen, un error de cobro es plata que ya salio mal.
+          Si hay de los dos, este se atiende primero. */}
+      {erroresPendientes > 0 && (
+        <Link
+          href="/admin/errores"
+          className="block rounded-sm border border-error/40 bg-error/10 px-4 py-3.5 transition-colors duration-200 hover:border-error/70"
+        >
+          <p className="font-semibold text-ink">
+            {erroresPendientes === 1
+              ? "Hay 1 error sin atender"
+              : `Hay ${erroresPendientes} errores sin atender`}
+          </p>
+          <p className="mt-1 text-sm text-ink-soft">
+            Cobros que quedaron mal —cobrados dos veces, sobre una compra dada de
+            baja, o devueltos— y mails que no salieron. Cada uno es plata a
+            devolver o alguien sin sus entradas. →
+          </p>
+        </Link>
+      )}
 
       {incidenciasPendientes > 0 && (
         <Link

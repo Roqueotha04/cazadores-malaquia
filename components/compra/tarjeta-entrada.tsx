@@ -30,13 +30,16 @@ export function TarjetaEntrada({ entrada }: { entrada: Entrada }) {
         className="absolute -right-2 top-1/2 size-4 -translate-y-1/2 rounded-full bg-surface"
       />
 
-      <div className="flex items-baseline justify-between gap-4">
+      {/* Envuelve en vez de recortar: `shrink-0` con `truncate` se anulaban entre
+          si —el nombre no cedia y la tarjeta, que es `overflow-hidden` por el
+          troquelado, se lo comia sin puntos suspensivos. En un telefono angosto
+          "Mesa 13 · Silla 107" mas un apellido largo no entran en un renglon, y
+          el nombre del titular es justo lo que se muestra en la puerta. */}
+      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
         <p className="font-display text-xl text-ink tabular sm:text-2xl">
           {ubicacion(entrada.mesaNumero, entrada.asientoNumero)}
         </p>
-        <p className="shrink-0 truncate text-sm text-ink-soft">
-          {entrada.titular}
-        </p>
+        <p className="text-sm text-ink-soft">{entrada.titular}</p>
       </div>
 
       <div className="mt-3 border-t border-dashed border-line pt-3">

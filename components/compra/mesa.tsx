@@ -56,7 +56,10 @@ function MesaBase({ mesa, seleccion, topeAlcanzado, onElegir }: Props) {
         "rounded-sm border p-1.5 transition-colors duration-200",
         mias > 0
           ? "border-brass/60 bg-surface-high"
-          : "border-line bg-surface-raised",
+          : // El borde se afirma al pasar por encima: con catorce mesas juntas
+            // es lo que dice cual estas mirando, sin competir con el laton de
+            // la silla.
+            "border-line bg-surface-raised hover:border-line-strong",
       ].join(" ")}
     >
       <p

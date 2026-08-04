@@ -5,8 +5,8 @@ import type { Resultado } from "../tipos";
 
 /**
  * Mercado Pago del otro lado: el SDK del backend espera hasta 20s por intento y
- * reintenta. Cortar a los 8s seria mostrarle un error a alguien que solo tenia
- * que esperar.
+ * reintenta. Cortar en el default de `lib/api.ts` seria mostrarle un error a
+ * alguien que solo tenia que esperar.
  */
 const TIMEOUT_MS = 30_000;
 

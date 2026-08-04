@@ -48,6 +48,11 @@ function SillaBase({
     tomada ? "ocupada" : elegida ? "elegida" : "libre"
   }`;
 
+  // El `title` suma lo que el estado no dice: que tocarla de nuevo la saca. El
+  // `aria-label` se queda seco —el lector de pantalla ya canta `aria-pressed`—
+  // para no leer una instruccion en cada una de las 730.
+  const ayuda = elegida ? `${etiqueta} — tocá para sacarla` : etiqueta;
+
   return (
     <button
       type="button"
@@ -56,7 +61,7 @@ function SillaBase({
       tabIndex={tabuladle ? 0 : -1}
       aria-pressed={elegida}
       aria-label={etiqueta}
-      title={etiqueta}
+      title={ayuda}
       className={[
         "relative rounded-[2px] border font-medium tabular",
         "transition-[transform,background-color,border-color,box-shadow] duration-150 ease-[var(--ease-salida)]",
@@ -66,7 +71,10 @@ function SillaBase({
         tomada
           ? "rayada cursor-not-allowed border-line bg-silla-tomada text-ink/60"
           : elegida
-            ? "border-brass-light bg-silla-elegida text-carbon shadow-[0_0_0_1px_var(--color-carbon)_inset]"
+            ? // La elegida tambien reacciona al mouse: sin esto la silla propia
+              // es la unica del plano que no contesta, y no hay señal de que
+              // tocandola se saca.
+              "border-brass-light bg-silla-elegida text-carbon shadow-[0_0_0_1px_var(--color-carbon)_inset] hover:z-[var(--z-plano)] hover:scale-110 hover:bg-brass-light hover:ring-2 hover:ring-brass-light/60"
             : bloqueada
               ? "cursor-not-allowed border-line bg-silla-libre/30 text-ink/40"
               : // La escala se queda: en un chip de 20×14 ayuda a apuntar. El

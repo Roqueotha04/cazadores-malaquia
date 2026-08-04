@@ -71,6 +71,76 @@ export type Resumen = {
     ordenesPorEstado: { estado: EstadoOrden; cantidad: number }[];
   };
   incidenciasPendientes: number;
+  /**
+   * Errores operativos sin atender. **No son casos**: los tres `COBRO_*` son
+   * plata mal cobrada que hay que devolver a mano, y un `MAIL_NO_ENVIADO` es
+   * alguien que pago y no tiene sus entradas.
+   */
+  erroresPendientes: number;
+};
+
+// ------------------------------------------------------- Errores operativos
+
+/**
+ * Cuanto quema. Es un conjunto cerrado y es lo que decide el color de la fila
+ * —a diferencia de `TipoError`, que puede crecer sin aviso.
+ */
+export type Gravedad = "URGENTE" | "REVISAR";
+
+/**
+ * Que fue lo que paso.
+ *
+ * **Es una lista abierta**: la columna no tiene `CHECK` en la base, asi que un
+ * tipo nuevo puede aparecer sin migracion y sin que este archivo se entere. El
+ * `(string & {})` es justamente para eso — deja que TypeScript siga
+ * autocompletando los conocidos pero acepta cualquier otro. Nada de `switch`
+ * exhaustivo: lo desconocido se muestra con su `mensaje` tal cual y se pinta por
+ * `gravedad`.
+ *
+ * Los tres `COBRO_*` son plata: uno cobrado dos veces, uno cobrado sobre una
+ * compra dada de baja y uno devuelto o desconocido.
+ */
+export type TipoError =
+  | "COBRO_DUPLICADO"
+  | "COBRO_DE_ORDEN_CAIDA"
+  | "COBRO_DEVUELTO"
+  | "MAIL_NO_ENVIADO"
+  | "ERROR_INESPERADO"
+  | "COMMIT_FALLIDO"
+  | (string & {});
+
+/** `GET /api/admin/errores`. Llega ya ordenado: urgentes arriba, lo nuevo primero. */
+export type ErrorOperativo = {
+  id: number;
+  tipo: TipoError;
+  gravedad: Gravedad;
+  /** Escrito para leerse. Es lo que se muestra, siempre. */
+  mensaje: string;
+  detalle: string | null;
+  /**
+   * `ordenId` y `ruta` son excluyentes en la practica: los urgentes traen orden,
+   * los de revisar traen ruta. **No viene el token de la orden por ningun
+   * campo** —es la credencial con la que se bajan esas entradas y una pantalla
+   * se comparte por captura—, asi que para abrir la compra hay que buscarla.
+   */
+  ordenId: number | null;
+  /**
+   * El **patron** del endpoint, no la URL que se pidio: llega
+   * `"GET /api/ordenes/{token}/entradas.pdf"` con la llave literal. No sirve
+   * para abrir nada ni para saber a que compra le paso, y es a proposito.
+   */
+  ruta: string | null;
+  ocurrioEl: Date | null;
+  /** `null` = pendiente. No hay estado intermedio. */
+  atendidoEl: Date | null;
+};
+
+export type ErrorOperativoJson = Omit<
+  ErrorOperativo,
+  "ocurrioEl" | "atendidoEl"
+> & {
+  ocurrioEl: string | null;
+  atendidoEl: string | null;
 };
 
 // ----------------------------------------------------------------- Puerta
@@ -242,6 +312,32 @@ export const TIPO_INCIDENCIA: Record<TipoIncidencia, string> = {
 export const ESTADO_INCIDENCIA: Record<EstadoIncidencia, string> = {
   ABIERTA: "Abierta",
   EN_CURSO: "En curso",
+};
+
+/**
+ * Los tipos de error que sabemos nombrar.
+ *
+ * **Parcial a proposito**: la lista es abierta y va a crecer del lado del
+ * backend. Lo que no este acá se muestra con su `mensaje`, que igual esta
+ * escrito para leerse — nunca con la constante cruda ni con un "desconocido".
+ */
+export const TIPO_ERROR: Partial<Record<TipoError, string>> = {
+  COBRO_DUPLICADO: "Cobrado dos veces",
+  COBRO_DE_ORDEN_CAIDA: "Cobro de una compra caída",
+  COBRO_DEVUELTO: "Cobro devuelto",
+  MAIL_NO_ENVIADO: "Mail que no salió",
+  ERROR_INESPERADO: "Error inesperado",
+  COMMIT_FALLIDO: "No se pudo guardar",
+};
+
+/** El rotulo de un tipo, o nada si no lo conocemos. */
+export function rotuloTipoError(tipo: TipoError): string | null {
+  return TIPO_ERROR[tipo] ?? null;
+}
+
+export const GRAVEDAD: Record<Gravedad, string> = {
+  URGENTE: "Urgente",
+  REVISAR: "Revisar",
 };
 
 /** El orden en el que se pintan, siempre el mismo. */

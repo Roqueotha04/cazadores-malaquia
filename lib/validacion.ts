@@ -44,12 +44,13 @@ export const dniSchema = z
   .transform((v) => v.replace(/\D/g, ""))
   .pipe(z.string().regex(/^\d{7,8}$/, "El DNI tiene que tener 7 u 8 números"));
 
+/** 254 es el largo del contrato, que es el maximo de una direccion de mail. */
 export const emailSchema = z
   .string()
   .trim()
   .toLowerCase()
   .pipe(z.email("Revisá el email: ahí te mandamos las entradas"))
-  .pipe(z.string().max(120));
+  .pipe(z.string().max(254));
 
 /** Los cuatro datos de contacto de un comprador, sin el DNI. */
 export const contactoComprador = {

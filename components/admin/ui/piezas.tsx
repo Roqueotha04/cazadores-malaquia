@@ -294,20 +294,31 @@ export function FilaBarra({
 }) {
   const porcentaje = maximo > 0 ? (valor / maximo) * 100 : 0;
 
+  /* Dos armados, no uno que se encoge.
+   *
+   * En el telefono las tres columnas no entran: el rotulo tiene 7rem de minimo y
+   * la cifra ocupa lo suyo, asi que a la barra le quedaban veinte pixeles y
+   * dejaba de comparar nada. Debajo de 640px el renglon se parte —rotulo y cifra
+   * arriba, barra a lo ancho abajo— y la barra recupera todo el ancho del panel.
+   */
   return (
-    <div className="grid grid-cols-[minmax(7rem,1fr)_2fr_auto] items-center gap-x-4 gap-y-1 px-5 py-3">
-      <p className="truncate text-sm text-ink-soft">{rotulo}</p>
-      <div className="h-2 rounded-sm bg-surface-sunken">
+    <div className="grid grid-cols-[1fr_auto] items-baseline gap-x-4 gap-y-2 px-5 py-3 sm:grid-cols-[minmax(7rem,1fr)_2fr_auto] sm:items-center sm:gap-y-1">
+      <p className="col-start-1 row-start-1 truncate text-sm text-ink-soft">
+        {rotulo}
+      </p>
+      <p className="col-start-2 row-start-1 text-right text-sm font-semibold text-ink tabular sm:col-start-3">
+        {cifra}
+      </p>
+      <div className="col-span-2 row-start-2 h-2 self-center rounded-sm bg-surface-sunken sm:col-span-1 sm:col-start-2 sm:row-start-1">
         <div
           className="h-full rounded-sm bg-brass/70"
           style={{ width: `${porcentaje}%` }}
         />
       </div>
-      <p className="text-right text-sm font-semibold text-ink tabular">
-        {cifra}
-      </p>
       {nota && (
-        <p className="col-start-2 col-end-4 text-xs text-ink-faint">{nota}</p>
+        <p className="col-span-2 row-start-3 text-xs text-ink-faint sm:col-start-2 sm:col-end-4 sm:row-start-2">
+          {nota}
+        </p>
       )}
     </div>
   );

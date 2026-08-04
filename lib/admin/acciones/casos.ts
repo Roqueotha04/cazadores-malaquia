@@ -31,12 +31,21 @@ export async function tomarCaso(
 }
 
 /**
- * La unica accion que hace algo de verdad: reserva las butacas nuevas, emite
- * las entradas, manda el mail y recien despues cierra el caso.
+ * La unica accion que hace algo de verdad: mueve la orden entera, emite las
+ * entradas, manda el mail y recien despues cierra el caso.
+ *
+ * Sirve para los cuatro tipos de caso. **Mueve la orden completa**: suelta todo
+ * lo que tiene y vuelve a tomar el total que pago, asi que `asientoIds` son
+ * *todas* sus butacas y no las que faltan — mandar solo las nuevas da 422. De
+ * paso reemite los codigos de todas las entradas, incluidas las que no se
+ * movieron: los viejos dejan de servir.
  *
  * **La cantidad no viaja en el body**: el backend la deriva del cobro. Si no
  * coincide contesta 422 diciendo cuantas pago y cuantas se mandaron, y ese
  * mensaje es mas exacto que cualquier cuenta que hagamos de este lado.
+ *
+ * Contesta **409 si alguna entrada de la orden ya paso por la puerta**: esa
+ * persona esta adentro y no se la puede mover, asi que no se toca nada.
  */
 export async function reubicarCaso(
   id: number,

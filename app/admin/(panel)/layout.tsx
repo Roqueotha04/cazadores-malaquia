@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { Shell } from "@/components/admin/shell/shell";
 import { BadgeCasos } from "@/components/admin/shell/badge-casos";
+import { BadgeErrores } from "@/components/admin/shell/badge-errores";
 import { Cuenta, CuentaCargando } from "@/components/admin/shell/cuenta";
 import {
   EstadoVenta,
@@ -22,9 +23,10 @@ export const metadata: Metadata = {
  * cerrada. La puerta esta en `lib/admin/api.ts`, pegada al dato, y cada pagina
  * la cruza sola. El proxy hace el rebote optimista antes de llegar hasta aca.
  *
- * Los tres datos del shell —cuenta, estado de la venta y casos pendientes— van
- * en `<Suspense>` para que un backend lento no frene el streaming de la pantalla
- * que se esta abriendo. La barra aparece primero; los datos, cuando llegan.
+ * Los datos del shell —cuenta, estado de la venta, casos y errores pendientes—
+ * van en `<Suspense>` para que un backend lento no frene el streaming de la
+ * pantalla que se esta abriendo. La barra aparece primero; los datos, cuando
+ * llegan. Los dos badges salen del mismo resumen memoizado: son una consulta.
  */
 export default function PanelLayout({
   children,
@@ -33,11 +35,18 @@ export default function PanelLayout({
 }) {
   return (
     <Shell
-      badge={
-        <Suspense fallback={null}>
-          <BadgeCasos />
-        </Suspense>
-      }
+      badges={{
+        casos: (
+          <Suspense fallback={null}>
+            <BadgeCasos />
+          </Suspense>
+        ),
+        errores: (
+          <Suspense fallback={null}>
+            <BadgeErrores />
+          </Suspense>
+        ),
+      }}
       cuenta={
         <Suspense fallback={<CuentaCargando />}>
           <Cuenta />

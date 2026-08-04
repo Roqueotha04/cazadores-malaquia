@@ -20,12 +20,21 @@ const base = process.env.API_URL?.replace(/\/$/, "");
 /**
  * Cuanto se espera al backend.
  *
- * 8 segundos para lo que solo toca la base de datos. `/pagar` y `/reconciliar`
- * salen a hablar con Mercado Pago —el SDK del back espera hasta 20s por intento
- * y reintenta— asi que esos dos piden su propio limite. Si cortaramos a los 8s
- * le mostrariamos "no pudimos conectar" a alguien que pago perfecto.
+ * 15 segundos para lo que solo toca la base de datos. Eran 8 y quedaban cortos:
+ * el backend Spring recien levantado, o la primera consulta despues de un rato
+ * —cuando el pool de Supabase tiene que abrir conexion— se pasan de ahi sin que
+ * nada este roto, y el comprador ve "no pudimos conectar" en una pantalla que
+ * hubiera cargado bien un segundo despues.
+ *
+ * Sigue siendo un limite y no una eternidad: si el backend no contesta en 15s
+ * hay un problema de verdad y quedarse esperando no lo arregla.
+ *
+ * `/pagar` y `/reconciliar` salen a hablar con Mercado Pago —el SDK del back
+ * espera hasta 20s por intento y reintenta— asi que esos dos piden su propio
+ * limite igual. Cortarlos acá seria mostrarle "no pudimos conectar" a alguien
+ * que pago perfecto.
  */
-const TIMEOUT_MS = 8_000;
+const TIMEOUT_MS = 15_000;
 
 type Opciones = {
   timeoutMs?: number;
@@ -110,6 +119,29 @@ export async function pedirOpcional<T>(
 }
 
 /**
+ * Descarga binaria: devuelve la `Response` cruda para reenviar el cuerpo tal
+ * cual, sin pasarlo por JSON.
+ *
+ * Hoy solo el PDF de las entradas. Va por el servidor de Next —y no con un
+ * `<a>` apuntando derecho al backend— por lo mismo que todo el resto: el
+ * navegador no habla con el backend, no tiene por que saber donde vive, y asi
+ * no hay que declarar el dominio del front en el CORS del otro lado.
+ */
+export async function pedirArchivo(
+  ruta: string,
+  opciones?: Opciones,
+): Promise<Response> {
+  const res = await llamar(ruta, undefined, {
+    ...opciones,
+    headers: { accept: "application/pdf", ...opciones?.headers },
+  });
+
+  if (!res.ok) throw new ErrorApi(res.status, ruta, await texto(res));
+
+  return res;
+}
+
+/**
  * El sobre de error del backend, igual para cualquier 4xx o 5xx.
  *
  * `mensaje` es texto escrito para mostrarle al comprador. `error` es la frase
@@ -176,6 +208,9 @@ export async function enviar<T>(
   }
 
   if (!res.ok) {
+    // Un 406 llega sin cuerpo por contrato, y cualquier otro puede llegar sin
+    // cuerpo si algo se rompio antes de escribirlo. `json` devuelve null en vez
+    // de lanzar y de ahi salimos con el texto generico.
     const detalle = await json<ErrorDelBackend>(res);
 
     if (!detalle) {
@@ -187,8 +222,7 @@ export async function enviar<T>(
       status: res.status,
       // `mensaje` primero y `error` ni de reserva: mostrarle "Conflict" a
       // alguien que esta comprando no le dice nada.
-      error:
-        detalle?.mensaje ?? "No pudimos completar la operación. Probá de nuevo.",
+      error: detalle?.mensaje ?? generico(res.status),
       campos: detalle?.campos,
       asientosOcupados: detalle?.asientosOcupados,
     };
@@ -198,6 +232,20 @@ export async function enviar<T>(
   const datos = res.status === 204 ? null : await json<T>(res);
 
   return { ok: true, datos: datos as T };
+}
+
+/**
+ * Lo que se muestra cuando el backend no mando `mensaje`.
+ *
+ * El 503 va aparte: no es un pedido mal hecho ni algo que se rompio: la base no
+ * contesto o no se pudo abrir la transaccion. La diferencia importa porque manda
+ * la conducta —esto se reintenta y suele andar— y "hubo un error" invita a
+ * llamar por telefono o a pagar de nuevo.
+ */
+function generico(status: number) {
+  return status === 503
+    ? "El sistema está sobrecargado. Esperá un momento y probá de nuevo: no se perdió nada."
+    : "No pudimos completar la operación. Probá de nuevo.";
 }
 
 async function texto(res: Response) {

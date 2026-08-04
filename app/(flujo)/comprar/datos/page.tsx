@@ -55,57 +55,12 @@ export default async function Datos(props: PageProps<"/comprar/datos">) {
         </p>
       </header>
 
-      <div className="mt-8 grid gap-10 lg:grid-cols-[1fr_20rem] lg:items-start lg:gap-14">
-        <div className="max-w-xl">
-          {ocupadas.length > 0 ? (
-            <div
-              role="alert"
-              className="rounded-sm border border-alerta/50 bg-alerta/10 px-5 py-5"
-            >
-              <h2 className="text-ink">Alguien se adelantó</h2>
-              <p className="mt-2 text-ink-soft">
-                Se llevaron{" "}
-                {ocupadas.length === 1
-                  ? "una de las sillas"
-                  : `${ocupadas.length} de las sillas`}{" "}
-                que habías elegido:
-              </p>
-
-              <ul className="mt-4 space-y-1.5">
-                {ocupadas.map((a) => (
-                  <li
-                    key={a.id}
-                    className="rounded-sm bg-surface-sunken px-3 py-2 text-sm font-medium tabular"
-                  >
-                    {ubicacion(a.mesa, a.silla)}
-                  </li>
-                ))}
-              </ul>
-
-              <BotonLink
-                href={`/comprar?asientos=${libres.map((a) => a.id).join(",")}`}
-                className="mt-6 w-full sm:w-auto"
-              >
-                Volver al plano y elegir otras
-              </BotonLink>
-
-              {libres.length > 0 && (
-                <p className="mt-3 text-sm text-ink-faint">
-                  Te guardamos las {libres.length} que sí conseguiste.
-                </p>
-              )}
-            </div>
-          ) : (
-            <FormularioDatos
-              asientos={asientos.map((a) => a.id)}
-              minutosReserva={evento.minutosReserva}
-            />
-          )}
-        </div>
-
-        {/* El resumen es protagonista, no una nota al margen: es lo que el
-            comprador viene a confirmar antes de dar el DNI. */}
-        <aside className="rounded-sm border border-line bg-surface-raised lg:sticky lg:top-24">
+      {/* El resumen va primero en el DOM y termina en la columna derecha en
+          escritorio: en el celular, si queda abajo, hay que pasar los cinco
+          campos y el checkbox para ver qué se está comprando. Lo que se
+          confirma antes de dar el DNI no puede estar despues del formulario. */}
+      <div className="mt-8 grid gap-8 lg:grid-cols-[1fr_20rem] lg:items-start lg:gap-14">
+        <aside className="rounded-sm border border-line bg-surface-raised lg:sticky lg:top-24 lg:col-start-2 lg:row-start-1">
           <div className="border-b border-line px-5 py-4">
             <h2 className="text-ink">Tu selección</h2>
           </div>
@@ -151,6 +106,53 @@ export default async function Datos(props: PageProps<"/comprar/datos">) {
             </dl>
           </div>
         </aside>
+
+        <div className="max-w-xl lg:col-start-1 lg:row-start-1">
+          {ocupadas.length > 0 ? (
+            <div
+              role="alert"
+              className="rounded-sm border border-alerta/50 bg-alerta/10 px-5 py-5"
+            >
+              <h2 className="text-ink">Alguien se adelantó</h2>
+              <p className="mt-2 text-ink-soft">
+                Se llevaron{" "}
+                {ocupadas.length === 1
+                  ? "una de las sillas"
+                  : `${ocupadas.length} de las sillas`}{" "}
+                que habías elegido:
+              </p>
+
+              <ul className="mt-4 space-y-1.5">
+                {ocupadas.map((a) => (
+                  <li
+                    key={a.id}
+                    className="rounded-sm bg-surface-sunken px-3 py-2 text-sm font-medium tabular"
+                  >
+                    {ubicacion(a.mesa, a.silla)}
+                  </li>
+                ))}
+              </ul>
+
+              <BotonLink
+                href={`/comprar?asientos=${libres.map((a) => a.id).join(",")}`}
+                className="mt-6 w-full sm:w-auto"
+              >
+                Volver al plano y elegir otras
+              </BotonLink>
+
+              {libres.length > 0 && (
+                <p className="mt-3 text-sm text-ink-faint">
+                  Te guardamos las {libres.length} que sí conseguiste.
+                </p>
+              )}
+            </div>
+          ) : (
+            <FormularioDatos
+              asientos={asientos.map((a) => a.id)}
+              minutosReserva={evento.minutosReserva}
+            />
+          )}
+        </div>
       </div>
     </div>
   );

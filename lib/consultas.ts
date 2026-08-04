@@ -159,6 +159,6 @@ function libres(asientos: Asiento[]) {
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /** Un token invalido termina en un 404 nuestro, no en un viaje al backend. */
-function esUuid(token: string) {
+export function esUuid(token: string) {
   return UUID.test(token);
 }

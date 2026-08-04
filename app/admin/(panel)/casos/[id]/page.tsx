@@ -139,11 +139,7 @@ export default async function CasoPage({
           </Panel>
 
           {!cerrado && (
-            <Reubicar
-              id={caso.id}
-              mesas={mapa.mesas}
-              esperadas={Math.max(1, esperadas)}
-            />
+            <Reubicar id={caso.id} mesas={mapa.mesas} esperadas={esperadas} />
           )}
         </div>
 
@@ -183,8 +179,9 @@ export default async function CasoPage({
               )}
             </div>
             <p className="border-t border-line px-5 py-3 text-xs text-ink-faint">
-              Van {esperadas === 1 ? "1 butaca" : `${esperadas} butacas`} según
-              lo que pagó. El servidor lo verifica igual.
+              Serían {esperadas === 1 ? "1 butaca" : `${esperadas} butacas`}{" "}
+              según lo cobrado. Es una cuenta de este lado: el número que manda
+              es el del servidor, y si no coincide te lo dice al reubicar.
             </p>
           </Panel>
 

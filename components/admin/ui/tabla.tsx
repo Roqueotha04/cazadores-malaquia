@@ -9,7 +9,15 @@ import type { ReactNode } from "react";
  *
  * Envuelta en su propio scroll horizontal: una tabla ancha tiene que desbordar
  * adentro de su caja, nunca empujar la pagina entera de costado.
+ *
+ * El ancho minimo sale de la cantidad de columnas y no de un numero escrito a
+ * mano: con `w-full` sola, en un telefono las siete columnas de Ordenes se
+ * apretaban hasta que cada nombre caia en tres renglones y las fechas en dos.
+ * Una tabla de datos se pasea de costado, no se estruja. `overscroll-x-contain`
+ * evita que ese paneo se lo coma el gesto de "volver atras" del navegador.
  */
+const ANCHO_POR_COLUMNA_REM = 5.5;
+
 export function Tabla({
   columnas,
   children,
@@ -18,8 +26,11 @@ export function Tabla({
   children: ReactNode;
 }) {
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full border-collapse text-sm">
+    <div className="overflow-x-auto overscroll-x-contain">
+      <table
+        className="w-full border-collapse text-sm"
+        style={{ minWidth: `${columnas.length * ANCHO_POR_COLUMNA_REM}rem` }}
+      >
         <thead>
           <tr className="border-b border-line">
             {columnas.map((columna) => (

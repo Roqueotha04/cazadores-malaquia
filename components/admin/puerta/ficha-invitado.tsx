@@ -61,7 +61,11 @@ export function FichaInvitado({ invitado }: { invitado: Invitado }) {
         <>
           <ul className="divide-y divide-line">
             {invitado.entradas.map((entrada) => (
-              <Entrada key={entrada.codigo} entrada={entrada} />
+              <Entrada
+                key={entrada.codigo}
+                entrada={entrada}
+                enLaFicha={`${invitado.nombre} ${invitado.apellido}`.trim()}
+              />
             ))}
           </ul>
 
@@ -76,13 +80,29 @@ export function FichaInvitado({ invitado }: { invitado: Invitado }) {
   );
 }
 
-function Entrada({ entrada }: { entrada: EntradaInvitado }) {
+function Entrada({
+  entrada,
+  enLaFicha,
+}: {
+  entrada: EntradaInvitado;
+  /** El nombre de la ficha viva, para avisar cuando no es el de la entrada. */
+  enLaFicha: string;
+}) {
   const [validada, setValidada] = useState<EntradaValidada | null>(null);
   const [error, setError] = useState("");
   const [validando, empezar] = useTransition();
 
   const anulada = entrada.anuladaEl !== null;
   const usada = entrada.usadoEl !== null;
+
+  /* El titular es una copia congelada de a quien se le vendio *esta* compra; el
+     nombre de arriba sale de la ficha, que cambia con el tiempo. Que no
+     coincidan es esperable —se corrigio un apellido despues de comprar— y no es
+     algo que haya que "arreglar" eligiendo uno de los dos. Se avisa solo cuando
+     pasa, para que en la puerta nadie lo lea como un dato roto. */
+  const otroNombre =
+    entrada.titular.trim().toLocaleLowerCase("es") !==
+    enLaFicha.toLocaleLowerCase("es");
 
   function validar() {
     setError("");
@@ -114,6 +134,12 @@ function Entrada({ entrada }: { entrada: EntradaInvitado }) {
           <p className="mt-0.5 truncate text-sm text-ink-soft">
             {entrada.titular}
           </p>
+          {otroNombre && (
+            <p className="mt-0.5 text-xs text-ink-faint">
+              A nombre de quien se hizo la compra. No tiene por qué coincidir con
+              el de arriba: se valida por código, no por nombre.
+            </p>
+          )}
         </div>
 
         <div className="flex shrink-0 items-center gap-2">

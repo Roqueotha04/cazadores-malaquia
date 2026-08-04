@@ -46,6 +46,15 @@ export function FormularioCorreccion({ usuario }: { usuario: UsuarioOrden }) {
         <Aviso tono="exito" titulo="Datos corregidos">
           Los PDF ya emitidos no cambian y no se reenvió nada. Si hacía falta
           que le lleguen de nuevo, usá «Reenviar entradas».
+          {/* El backend soporta a proposito que la misma persona compre dos
+              veces con mails distintos: corregir la ficha ya no le pisa el
+              contacto a las otras compras. Solo se alinean las que tenian el
+              dato viejo. */}
+          <span className="mt-2 block">
+            Se corrigió la ficha de la persona. Sus otras compras conservan el
+            contacto con el que se hicieron: si alguna quedó con un dato viejo,
+            hay que abrirla y mirarla.
+          </span>
         </Aviso>
       )}
 

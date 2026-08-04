@@ -1,13 +1,13 @@
 /**
- * El token de la orden, guardado en el navegador.
+ * El token de la orden, guardado en el navegador. Hoy es un respaldo.
  *
- * Mercado Pago devuelve al comprador a una back-url fija que NO lleva el token,
- * y ese token es la unica credencial que existe para nombrar una orden. Si no lo
- * guardamos nosotros, la pantalla de vuelta del checkout no tiene con que
- * preguntar si el pago entro.
+ * El backend arma la back-url de cada pago con el token adentro
+ * (`/checkout/exito/{token}`), asi que la pantalla de vuelta ya no depende de
+ * esto: funciona igual si el comprador vuelve en otra pestaña. Queda para las
+ * compras que salieron con una preferencia armada antes de ese cambio, que
+ * vuelven a `/checkout/exito` pelado y sin nada que las identifique.
  *
- * Se escribe al llegar a la reserva y se lee al volver del pago. Es lo unico que
- * el front conserva de toda la compra.
+ * Se escribe al llegar a la reserva y se lee al volver del pago.
  */
 
 const CLAVE = "cazadores:orden";

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { BotonImprimir } from "@/components/compra/boton-imprimir";
 import { TarjetaEntrada } from "@/components/compra/tarjeta-entrada";
-import { BotonLink } from "@/components/ui/boton";
+import { BotonAncla, BotonLink } from "@/components/ui/boton";
 import {
   obtenerEntradasPorToken,
   obtenerEvento,
@@ -12,6 +12,9 @@ import { fechaEvento, precio } from "@/lib/formato";
 
 export default async function Entradas(props: PageProps<"/entradas/[token]">) {
   const { token } = await props.params;
+
+  // Lo pone el route handler del PDF cuando el backend no se lo dio.
+  const { pdf } = await props.searchParams;
 
   const [orden, entradas, evento] = await Promise.all([
     obtenerOrdenPorToken(token),
@@ -68,8 +71,41 @@ export default async function Entradas(props: PageProps<"/entradas/[token]">) {
             Guardá este link.
           </strong>{" "}
           Es donde vas a tener tus entradas siempre a mano. También te las
-          mandamos a {orden.usuario.email}.
+          mandamos a {orden.usuario.email}, con el PDF adjunto.
         </p>
+      </div>
+
+      {pdf === "no" && (
+        <p
+          role="alert"
+          className="no-imprimir mt-4 rounded-sm border border-alerta/50 bg-alerta/10 px-4 py-3 text-sm text-ink"
+        >
+          No pudimos armar el PDF en este momento. Probá de nuevo en un rato o
+          imprimí esta pantalla: tus entradas valen igual, y las de abajo son
+          las mismas.
+        </p>
+      )}
+
+      {/* El PDF lo arma el backend y es el mismo que llegó por mail: no hay una
+          version "de la web" distinta. Va como enlace y no como fetch — la
+          descarga la maneja el navegador, que ya sabe hacerlo. */}
+      <div className="no-imprimir mt-6 flex flex-col gap-3 sm:flex-row">
+        <BotonAncla
+          href={`/entradas/${token}/entradas.pdf`}
+          download
+          medida="chico"
+        >
+          Descargar el PDF
+        </BotonAncla>
+        <BotonAncla
+          href={`/entradas/${token}/entradas.pdf?inline=1`}
+          target="_blank"
+          rel="noopener"
+          tono="secundario"
+          medida="chico"
+        >
+          Verlo en pantalla
+        </BotonAncla>
       </div>
 
       <div className="mt-8 flex items-center justify-between gap-4">

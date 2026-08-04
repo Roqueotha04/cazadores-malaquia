@@ -38,8 +38,10 @@ export default async function Comprar(props: PageProps<"/comprar">) {
   const minutos = mapa.evento.minutosReserva - COLCHON_PAGO_MIN;
 
   return (
-    /* pb generoso: en el celular la barra fija de abajo tapa contenido. */
-    <div className="mx-auto w-full max-w-6xl px-5 py-8 pb-32 lg:pb-16">
+    /* pb generoso: donde va la barra fija de abajo, tapa contenido. La condición
+       es la misma que la de la barra —ancho `lg` y puntero fino— y no solo el
+       ancho: en una tablet en horizontal la barra sigue estando. */
+    <div className="mx-auto w-full max-w-6xl px-5 py-8 pb-32 lg:pointer-fine:pb-16">
       <Pasos actual={1} />
 
       <header className="mt-8 border-b border-line pb-8">

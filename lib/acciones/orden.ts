@@ -21,6 +21,17 @@ const TIMEOUT_MS = 45_000;
  * Es idempotente y barata de repetir: si el aviso ya había llegado por webhook,
  * no le pregunta nada a nadie. Si vuelve `ACTIVA`, el pago quedó en proceso y se
  * puede reintentar.
+ *
+ * Hay que llamarla **aunque el último intento figure rechazado**: Checkout Pro
+ * deja reintentar con otra tarjeta sobre la misma preferencia, así que un intento
+ * rechazado todavía puede terminar cobrando y esta llamada es la única red que
+ * queda si el webhook no llegó.
+ *
+ * Con la orden `CANCELADA` o `ANULADA` no le pregunta nada a Mercado Pago:
+ * devuelve la orden tal como está y no la toca. Una compra cancelada **no vuelve
+ * a `PAGADA` nunca más** — si el cobro entró igual, queda asentado del otro lado
+ * y el reintegro lo hace el equipo a mano. Insistir sobre una cancelada esperando
+ * que cambie es esperar algo que no va a pasar.
  */
 export async function reconciliar(token: string): Promise<Resultado<Orden>> {
   const resultado = await enviar<OrdenJson>(

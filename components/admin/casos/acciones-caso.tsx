@@ -13,13 +13,19 @@ import { AreaTexto } from "../ui/campos";
 import { Aviso, Panel } from "../ui/piezas";
 
 /**
- * Reubicar a alguien que pago y se quedo sin lugar.
+ * Reubicar a alguien que pago y quedo mal sentado.
  *
- * La cantidad tiene que ser exactamente la que la orden pago, y ese numero **no
- * viaja en el body**: lo deriva el backend del cobro. Acá se muestra como pista
- * la cantidad de butacas que la orden tenia —las que habia elegido y perdio— y
- * se apaga el boton mientras no coincida, pero la verdad la dice el 422, que
- * informa cuantas pago y cuantas se mandaron. Ese mensaje se muestra tal cual.
+ * Mueve la orden **entera**: suelta todo lo que tiene y vuelve a tomar el total
+ * que pago. Por eso se eligen todas sus butacas, no las que faltan — mandar solo
+ * las nuevas da 422. Sirve para los cuatro tipos de caso.
+ *
+ * La cantidad tiene que ser exactamente la que la orden pago y ese numero **no
+ * viaja en el body**: lo deriva el backend del cobro. `esperadas` es la misma
+ * cuenta hecha de este lado y se muestra como pista, pero **no bloquea**: en
+ * `MONTO_DISTINTO` el importe cobrado no coincide con el precio, la cuenta no
+ * cierra y un boton apagado dejaria el caso sin salida a las once de la noche.
+ * La verdad la dice el 422, que informa cuantas pago y cuantas se mandaron, y
+ * ese mensaje se muestra tal cual.
  */
 export function Reubicar({
   id,
@@ -31,8 +37,7 @@ export function Reubicar({
   esperadas: number;
 }) {
   const router = useRouter();
-  const { elegidos, detalle, ids, ubicaciones, alternar, topeAlcanzado } =
-    useSeleccion(mesas, { tope: esperadas });
+  const { elegidos, detalle, ids, ubicaciones, alternar } = useSeleccion(mesas);
 
   const [error, setError] = useState("");
   const [ocupadas, setOcupadas] = useState<number[]>([]);
@@ -66,9 +71,20 @@ export function Reubicar({
       <Panel titulo="Reubicada">
         <div className="p-5">
           <Aviso tono="exito" titulo="Caso cerrado">
-            Se reservaron las butacas nuevas, se emitieron las entradas y salió
-            el mail con el PDF. El caso quedó resuelto.
+            Se tomaron las butacas nuevas y salió el mail con el PDF. El caso
+            quedó resuelto.
           </Aviso>
+          {/* Se reemite la orden completa, no solo lo que se movio: cualquier
+              PDF que esta persona ya tenga bajado dejo de servir. Si llega a la
+              puerta con el viejo, no entra. */}
+          <p className="mt-4 max-w-[65ch] text-sm text-ink-soft">
+            <strong className="font-semibold text-ink">
+              Se emitieron códigos nuevos para todas las entradas
+            </strong>
+            , incluso las que no se movieron. Los códigos viejos ya no sirven: si
+            esta persona bajó el PDF antes, tiene que volver a bajarlo o usar el
+            mail que le acaba de llegar.
+          </p>
           <div className="mt-4">
             <Boton onClick={() => router.push("/admin/casos")}>
               Volver a la cola
@@ -83,27 +99,28 @@ export function Reubicar({
     <div className="space-y-5">
       <Panel titulo="Elegir las butacas nuevas">
         <div className="p-5">
-          <p className="text-sm text-ink-soft">
-            Tienen que ser{" "}
+          <p className="max-w-[65ch] text-sm text-ink-soft">
+            Van <strong className="text-ink">todas</strong> las butacas de la
+            compra, no las que faltan: la orden se mueve entera. Tienen que ser{" "}
             <strong className="text-ink">
-              exactamente {esperadas} {esperadas === 1 ? "butaca" : "butacas"}
+              {esperadas} {esperadas === 1 ? "butaca" : "butacas"}
             </strong>
-            : es la cantidad que esta persona pagó. Si no coincide, el servidor
-            lo rechaza y avisa cuántas eran.
+            , que es lo que esta persona pagó. Si no coincide, el servidor lo
+            rechaza y avisa cuántas eran.
           </p>
 
           <div className="mt-4">
             <PlanoSalon
               mesas={mesas}
               elegidos={elegidos}
-              topeAlcanzado={topeAlcanzado}
+              topeAlcanzado={false}
               onElegir={alternar}
               rotuloElegida="Butaca nueva"
               tituloCelular="Elegí la mesa"
               ayudaCelular="Después elegís las sillas dentro de la mesa."
               aviso={
-                topeAlcanzado
-                  ? `Ya elegiste las ${esperadas}. Sacá una para cambiarla.`
+                faltan < 0
+                  ? `Van ${detalle.length} y esta compra pagó ${esperadas}. Revisá antes de enviar.`
                   : ""
               }
             />
@@ -140,9 +157,13 @@ export function Reubicar({
           )}
 
           <div className="flex flex-wrap items-center gap-3">
+            {/* Solo se exige haber elegido algo. La cantidad exacta la valida el
+                backend contra el cobro: si `esperadas` sale mal —el caso de
+                MONTO_DISTINTO— un boton apagado dejaria el caso trabado sin
+                forma de cerrarlo desde el panel. */}
             <Boton
               onClick={reubicar}
-              disabled={faltan !== 0 || enviando}
+              disabled={detalle.length === 0 || enviando}
               cargando={enviando}
             >
               {enviando ? "Reubicando…" : "Reubicar y cerrar el caso"}
@@ -151,13 +172,17 @@ export function Reubicar({
             <p className="text-sm text-ink-soft tabular">
               {faltan > 0
                 ? `Faltan ${faltan} de ${esperadas}`
-                : `${esperadas} de ${esperadas} elegidas`}
+                : faltan < 0
+                  ? `${detalle.length} elegidas, pagó ${esperadas}`
+                  : `${esperadas} de ${esperadas} elegidas`}
             </p>
           </div>
 
           <p className="text-xs text-ink-faint">
-            Reserva las butacas, emite las entradas y manda el mail. Puede tardar
-            unos segundos.
+            Suelta las butacas que tenga, toma las nuevas, emite entradas con
+            códigos nuevos —todas, no solo las que se mueven— y manda el mail.
+            Puede tardar unos segundos. Si alguien de esta compra ya pasó por la
+            puerta no se puede: esa persona está adentro y no se la mueve.
           </p>
         </div>
       </Panel>

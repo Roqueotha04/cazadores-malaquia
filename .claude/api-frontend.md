@@ -133,9 +133,14 @@ Crea la orden y **reserva las butacas** por `minutosReserva`.
 }
 ```
 
-Todos los campos del usuario son obligatorios. El DNI son **7 u 8 dígitos sin
-puntos** (con puntos no se encuentra a la persona en la puerta) y el email tiene
-que ser válido — los dos vuelven en `campos` si fallan. El usuario se busca por
+Todos los campos del usuario son obligatorios y **tienen que entrar en un
+largo**: `nombre` y `apellido` hasta 60, `email` con formato y hasta 254,
+`celular` de 8 a 20 caracteres con dígitos y `+ ( ) - espacio`, y el DNI **7 u 8
+dígitos sin puntos** (con puntos no se encuentra a la persona en la puerta).
+Todos vuelven en `campos` si fallan. El celular acepta las formas en que la gente
+lo escribe —`2236680996`, `+54 9 223 668-0996`, `(223) 668 0996`— y lo que
+rechaza son las letras. **Conviene replicar estas reglas en el formulario** para
+que el error aparezca al tipear y no recién al enviar. El usuario se busca por
 DNI y se crea si no existe; comprar dos veces con el mismo DNI no duplica nada.
 
 **Comprar con un DNI que ya existe no pisa los datos de esa persona**: cada
@@ -144,8 +149,9 @@ comprar dos veces con mails distintos y cada compra llega a donde se hizo. Antes
 no era así, y era un agujero: se podían desviar entradas ajenas sabiendo sólo un
 DNI.
 
-`asientoIds` no puede venir vacío. Los ids repetidos se cuentan una sola vez
-contra el límite: mandar diez veces la misma butaca es una butaca.
+`asientoIds` no puede venir vacío ni traer más de 100. Los ids repetidos se
+cuentan una sola vez contra el límite: mandar diez veces la misma butaca es una
+butaca.
 
 Respuesta — `OrdenResponse`, el mismo cuerpo que devuelven el GET y
 `/reconciliar`:
@@ -226,18 +232,49 @@ Mercado Pago por los cobros de la orden, y si encuentra uno aprobado marca la
 orden como pagada y emite las entradas. Devuelve el `OrdenResponse` ya
 actualizado.
 
-Mercado Pago redirige al comprador a las back-urls configuradas
-(`/checkout/exito`, `/checkout/error`, `/checkout/pendiente`) con un querystring
-propio. **Ese querystring es falsificable y no hay que creerle**: la página de
-retorno toma el token de donde lo guardó el front, llama a este endpoint, y la
-verdad la contesta el backend.
+Mercado Pago redirige al comprador a las back-urls que el backend arma por cada
+pago, y que **llevan el token de la orden en la ruta**:
 
-Las back-urls **no llevan el token**, por eso hace falta el localStorage.
+```
+{mp.front-url}/checkout/exito/{token}
+{mp.front-url}/checkout/error/{token}
+{mp.front-url}/checkout/pendiente/{token}
+```
+
+Esos tres paths son un acuerdo entre los dos proyectos —están fijos en
+`MercadoPagoClientImpl`—: **si el front los cambia, hay que avisar**, porque el
+backend no tiene forma de enterarse solo. La página de vuelta ya no depende de
+nada guardado en el navegador, así que funciona igual si el comprador vuelve en
+otra pestaña. El `localStorage` quedó sólo como respaldo para las preferencias
+armadas antes de este cambio, que vuelven a `/checkout/exito` sin token.
+
+MP le pega igual su propio querystring
+(`?collection_id=…&status=approved&external_reference=…`), y eso no se puede
+desactivar. **De ahí no se lee nada**: son parámetros del cliente, los escribe
+cualquiera en la barra de direcciones, y dar la compra por buena porque dice
+`status=approved` es el error clásico. El `external_reference` es el id del
+intento de cobro, **no** el de la orden: no sirve para pedirle nada a esta API.
+Para dejar la barra limpia, después de aterrizar alcanza con
+`history.replaceState({}, "", location.pathname)`.
 
 Es idempotente y barato de repetir: si el aviso de MP ya había llegado por
 webhook, no le pregunta nada a nadie y responde lo mismo que el GET. Si vuelve
 `ACTIVA` (el pago quedó en proceso), se puede reintentar cada unos segundos por
 un rato antes de mostrar "pendiente".
+
+**Hay que llamarlo aunque el último intento figure rechazado.** Checkout Pro deja
+reintentar con otra tarjeta sobre la misma preferencia, así que un intento
+rechazado todavía puede terminar cobrando: es justo el caso que se pierde si el
+front deja de consultar al ver un rechazo.
+
+**Con la orden `CANCELADA` o `ANULADA` no le pregunta nada a Mercado Pago**:
+devuelve la orden tal como está y no la toca. Consecuencia directa: **una orden
+cancelada no vuelve a `PAGADA` nunca más**, ni aunque el comprador termine de
+pagar en la pestaña de MP que había dejado abierta. Esa plata queda registrada
+como `COBRO_DE_ORDEN_CAIDA` en la pantalla de errores del panel y la devuelve el
+equipo a mano. **No hacer polling sobre una orden cancelada esperando que
+cambie**, y no afirmarle al comprador que no se le cobró nada: lo correcto es
+"figura cancelada, escribinos por el reintegro".
 
 Cuando termina en `PAGADA`, el mail con las entradas en PDF sale solo desde el
 backend — el front no dispara nada.
@@ -260,6 +297,26 @@ Las entradas emitidas. Devuelve `[]` mientras la orden no esté pagada.
 
 `codigo` es el UUID que va en el QR. `usadoEl` es `null` hasta que la escanean en
 la puerta. **404** si el token no existe.
+
+### `GET /api/ordenes/{token}/entradas.pdf`
+
+El PDF de las entradas: el mismo archivo que llega adjunto al mail, no una
+versión "de la web".
+
+```
+GET …/entradas.pdf               → se descarga  (Content-Disposition: attachment)
+GET …/entradas.pdf?inline=true   → se abre      (Content-Disposition: inline)
+```
+
+**404** —con el `ErrorResponse` de siempre y el mensaje `"La orden no tiene
+entradas emitidas"`— mientras la compra no esté pagada, y también si el equipo
+anuló todas sus entradas: el PDF sólo arma las vigentes, porque imprimir una
+butaca anulada sería mandar a alguien a un lugar ya revendido. Antes de ofrecer
+el link hay que confirmar que la orden está `PAGADA`.
+
+Se puede pedir con un `<a href>`; bajarlo por JavaScript mete CORS en el medio.
+Acá el link apunta a `/entradas/{token}/entradas.pdf` de Next, que lo pide por
+`lib/api.ts` y reenvía el archivo: el navegador no habla con el backend.
 
 ---
 
@@ -328,7 +385,7 @@ pago.
 
 **`/pagar` y `/reconciliar` son lentos.** Los dos salen a hablar con Mercado
 Pago, y el SDK del backend espera hasta 20 s por intento y reintenta. Timeout de
-cliente de **30 s** para esos dos; para el resto, 8 s sobra. Cortar antes es
+cliente de **30 s** para esos dos; para el resto, 15 s sobra. Cortar antes es
 mostrarle un error a alguien que solo tenía que esperar — o peor, a alguien que
 ya pagó.
 
@@ -338,3 +395,12 @@ entre el vencimiento del link y el de la orden vive como
 front, y **no viaja en ninguna respuesta**. Si cambia de un lado tiene que
 cambiar del otro: si no, el contador muestra tiempo que ya no se puede usar y
 `/pagar` devuelve `OrdenExpirada`.
+
+**Todos los errores traen el mismo cuerpo** (`status`, `error`, `mensaje`, y
+`campos` o `asientosOcupados` cuando corresponde) y `mensaje` se muestra tal cual
+al comprador. **La excepción es el 406, que llega sin cuerpo**: no intentar
+parsearlo. Un **503** no es culpa del pedido —la base no contestó o no se pudo
+abrir la transacción— y se muestra como "reintentá en un rato", no como error; un
+**409** por deadlock entre dos compradores es reintentable y su `mensaje` ya lo
+dice. Ojo con el 404: una **ruta inexistente devuelve 401**, porque la
+autorización corre antes que el router.

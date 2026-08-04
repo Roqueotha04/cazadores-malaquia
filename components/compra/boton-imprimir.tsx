@@ -3,26 +3,23 @@
 import { Boton } from "@/components/ui/boton";
 
 /**
- * Guardar las entradas en papel o en PDF.
+ * Imprimir esta pantalla.
  *
- * Usa la impresion del navegador, que en todos lados ofrece "Guardar como PDF":
- * no hace falta sumar una dependencia de PDF ni un endpoint que las genere. El
- * bloque `@media print` de globals.css es el que hace que salgan en negro sobre
+ * Es el camino de al lado del PDF, no el mismo: el PDF lo arma el backend y es
+ * el que vale en la puerta. Esto imprime la pagina tal cual, y sirve cuando el
+ * archivo no baja o cuando alguien quiere el papel y ya lo tiene abierto. El
+ * bloque `@media print` de globals.css es el que hace que salga en negro sobre
  * blanco y sin la barra ni el pie.
- *
- * Si mas adelante hace falta un PDF de verdad (uno que se pueda mandar adjunto
- * por mail, por ejemplo), el lugar es el backend: un GET que devuelva el
- * archivo ya armado.
  */
 export function BotonImprimir() {
   return (
     <Boton
-      tono="secundario"
+      tono="fantasma"
       medida="chico"
       className="no-imprimir"
       onClick={() => window.print()}
     >
-      Descargar o imprimir
+      Imprimir
     </Boton>
   );
 }

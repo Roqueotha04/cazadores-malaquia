@@ -60,6 +60,14 @@ const CAMPOS = ["nombre", "apellido", "email", "celular"] as const;
  * El DNI va en la ruta y no en el cuerpo: identifica a la persona, y las
  * compras, las entradas y la busqueda de la puerta cuelgan de el. No cambia los
  * PDF ya emitidos y no reenvia nada.
+ *
+ * **No reescribe todas las compras de ese DNI.** Cada orden guarda una copia
+ * congelada del comprador y el backend solo la alinea en los campos donde esa
+ * copia coincidia con el valor viejo de la ficha. Es a proposito: la misma
+ * persona puede haber comprado dos veces con mails distintos, y pisarle el mail
+ * a la otra compra le sacaba el reenvio por DNI + email a quien lo tenia. Lo que
+ * devuelve es la **ficha** corregida, no el estado de las ordenes: si una
+ * pantalla muestra el contacto por orden, hay que releerlo del backend.
  */
 export async function corregirUsuario(
   dni: string,

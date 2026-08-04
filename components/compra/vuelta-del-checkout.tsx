@@ -12,20 +12,24 @@ import type { Orden } from "@/lib/tipos";
 /**
  * Vuelta del checkout de Mercado Pago.
  *
- * Mercado Pago manda al comprador acá con un querystring propio. Ese
- * querystring es falsificable y no hay que creerle: la única forma honesta de
- * saber si el pago entró es preguntarle al backend, que es lo que hace
+ * El token de la compra viene en la ruta —`/checkout/exito/{token}`—, así que
+ * esta pantalla funciona aunque el comprador vuelva en otra pestaña o en otro
+ * navegador. El localStorage quedó como respaldo para las compras que salieron
+ * con una preferencia armada antes de ese cambio.
+ *
+ * Mercado Pago le pega igual su propio querystring
+ * (`?collection_id=…&status=approved&…`) y eso no se puede desactivar. **De ahí
+ * no se lee nada**: son parámetros del cliente, los escribe cualquiera en la
+ * barra de direcciones, y dar la compra por buena porque dice `approved` es el
+ * error clásico. Se limpian apenas carga la página y la verdad la contesta
  * `reconciliar`.
  *
- * Y las back-urls no llevan el token, así que ni siquiera sabemos de qué compra
- * hablamos hasta leer el localStorage que escribió la pantalla de la reserva.
- *
- * El `status` del proveedor se usa para una sola cosa: elegir el copy mientras
- * la orden sigue ACTIVA. Quien decide es siempre el backend.
+ * El `desenlace` sale del path, que también escribe el navegador: se usa para
+ * una sola cosa, elegir el copy mientras la orden sigue ACTIVA. Quien decide es
+ * siempre el backend.
  */
 
-const APROBADOS = ["approved", "success"];
-const PENDIENTES = ["pending", "in_process", "in_mediation"];
+export type Desenlace = "exito" | "error" | "pendiente";
 
 /** Cada cuánto se vuelve a preguntar, contando desde que contestó la anterior. */
 const CADA_MS = 5_000;
@@ -40,12 +44,12 @@ const suscribir = () => () => {};
 const enElServidor = () => undefined;
 
 export function VueltaDelCheckout({
-  tokenDeLaUrl,
-  estadoProveedor,
+  desenlace,
+  tokenDeLaRuta,
 }: {
-  /** Respaldo por si algún día las back-urls sí lo llevan. */
-  tokenDeLaUrl: string | null;
-  estadoProveedor: string;
+  desenlace: Desenlace;
+  /** El de la ruta manda; falta sólo en las back-urls viejas, sin token. */
+  tokenDeLaRuta?: string;
 }) {
   const router = useRouter();
 
@@ -55,13 +59,22 @@ export function VueltaDelCheckout({
 
   // undefined mientras no hidratamos; null si no había nada guardado.
   const guardado = useSyncExternalStore(suscribir, tokenGuardado, enElServidor);
-  const token = tokenDeLaUrl ?? guardado;
+  const token = tokenDeLaRuta ?? guardado;
+
+  /* El querystring de Mercado Pago no se usa para nada y llena la barra de
+     direcciones de ruido. Se saca sin dejar entrada en el historial: el "atrás"
+     tiene que volver al checkout, no a esta misma pantalla con la URL sucia. */
+  useEffect(() => {
+    if (window.location.search) {
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+  }, []);
 
   /* Sólo se insiste cuando el proveedor dijo que aprobó: ahí sí existe la
      ventana en la que el pago está hecho y el webhook todavía no llegó. Si dijo
      rechazado, o si el medio tarda días en acreditarse, una consulta alcanza:
      repetirla dieciocho veces es castigar a Mercado Pago por nada. */
-  const insistir = APROBADOS.includes(estadoProveedor);
+  const insistir = desenlace === "exito";
 
   const decidido = !!fallo || (!!orden && orden.estado !== "ACTIVA");
   const agotado = segundos >= LIMITE_SEG;
@@ -129,9 +142,9 @@ export function VueltaDelCheckout({
     return (
       <Marco titulo="No encontramos tu compra">
         <p className="text-lg text-ink-soft">
-          Volviste desde el pago en otro navegador o se borraron los datos de
-          este. Si ya pagaste, buscá el mail que te mandamos: ahí están tus
-          entradas.
+          El link con el que volviste no trae el código de la compra y en este
+          navegador no quedó guardado. Si ya pagaste, buscá el mail que te
+          mandamos: ahí están tus entradas, con el PDF adjunto.
         </p>
         <BotonLink href="/" className="mt-8 w-full sm:w-auto">
           Volver al inicio
@@ -168,7 +181,7 @@ export function VueltaDelCheckout({
     return (
       <Marco
         titulo={
-          APROBADOS.includes(estadoProveedor)
+          desenlace === "exito"
             ? "Recibimos tu pago"
             : "Estamos verificando tu compra"
         }
@@ -192,16 +205,45 @@ export function VueltaDelCheckout({
 
   const detalle = <Detalle orden={orden} />;
 
-  if (orden.estado === "EXPIRADA" || orden.estado === "CANCELADA") {
+  if (orden.estado === "EXPIRADA") {
     return (
       <Marco titulo="Esta compra ya no está vigente">
         <div className="rounded-sm border border-alerta/50 bg-alerta/10 px-5 py-5">
           <p className="text-ink-soft">
-            {orden.estado === "EXPIRADA"
-              ? "Se venció el tiempo y liberamos las sillas para que las tome otra persona."
-              : "La compra se canceló y las sillas volvieron a estar disponibles."}
+            Se venció el tiempo y liberamos las sillas para que las tome otra
+            persona.
           </p>
           <p className="mt-3 font-semibold text-ink">No se te cobró nada.</p>
+        </div>
+        <BotonLink href="/comprar" className="mt-8 w-full sm:w-auto">
+          Volver a elegir mis sillas
+        </BotonLink>
+      </Marco>
+    );
+  }
+
+  /* Una compra cancelada no se convierte en pagada nunca más, ni aunque el cobro
+     entre después: el backend deja de preguntarle a Mercado Pago apenas la orden
+     sale de ACTIVA. Y el cobro puede haber entrado igual —Checkout Pro deja
+     seguir pagando en la pestaña que quedó abierta—, así que acá no se puede
+     afirmar que no se cobró nada. Queda registrado del otro lado y el reintegro
+     lo hace el equipo a mano; lo único honesto es decirlo y dar el código. */
+  if (orden.estado === "CANCELADA" || orden.estado === "ANULADA") {
+    return (
+      <Marco titulo="Esta compra ya no está vigente">
+        <div className="rounded-sm border border-alerta/50 bg-alerta/10 px-5 py-5">
+          <p className="text-ink-soft">
+            {orden.estado === "CANCELADA"
+              ? "La compra se canceló y las sillas volvieron a estar disponibles."
+              : "Dimos de baja esta compra y las sillas volvieron a estar disponibles."}
+          </p>
+          <p className="mt-3 font-semibold text-ink">
+            Si te llegaron a cobrar, escribinos con este código y te devolvemos
+            la plata:
+          </p>
+          <p className="mt-2 text-sm text-ink tabular select-all break-all">
+            {token}
+          </p>
         </div>
         <BotonLink href="/comprar" className="mt-8 w-full sm:w-auto">
           Volver a elegir mis sillas
@@ -213,7 +255,7 @@ export function VueltaDelCheckout({
   // De acá para abajo la orden sigue ACTIVA: el backend todavía no vio un cobro
   // aprobado. Qué mostrar depende de con qué venía la persona.
 
-  if (PENDIENTES.includes(estadoProveedor)) {
+  if (desenlace === "pendiente") {
     return (
       <Marco titulo="Tu pago está en camino">
         <div className="rounded-sm border border-alerta/50 bg-alerta/10 px-5 py-5">
@@ -234,7 +276,7 @@ export function VueltaDelCheckout({
     );
   }
 
-  if (APROBADOS.includes(estadoProveedor) && !agotado) {
+  if (desenlace === "exito" && !agotado) {
     return (
       <Marco titulo="Recibimos tu pago">
         <EsperaConfirmacion token={token} segundos={segundos} demorado={false} />
@@ -243,7 +285,7 @@ export function VueltaDelCheckout({
     );
   }
 
-  if (APROBADOS.includes(estadoProveedor)) {
+  if (desenlace === "exito") {
     return (
       <Marco titulo="Estamos verificando tu pago">
         <EsperaConfirmacion token={token} segundos={segundos} demorado />
@@ -252,7 +294,7 @@ export function VueltaDelCheckout({
     );
   }
 
-  // Rechazado, cancelado, o cualquier cosa que no sea aprobado ni pendiente.
+  // `desenlace === "error"`: rechazado o cancelado antes de terminar.
   return (
     <Marco titulo="El pago no se completó">
       <div className="rounded-sm border border-error/50 bg-error/10 px-5 py-5">

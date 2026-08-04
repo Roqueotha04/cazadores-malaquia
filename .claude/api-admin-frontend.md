@@ -43,7 +43,8 @@ Cómo va la venta, en un solo pedido: es la pantalla de entrada.
     "porMedio": [ { "medio": "MERCADOPAGO", "totalCentavos": 129500000, "cantidad": 37 } ],
     "ordenesPorEstado": [ { "estado": "PAGADA", "cantidad": 41 } ]
   },
-  "incidenciasPendientes": 2
+  "incidenciasPendientes": 2,
+  "erroresPendientes": 3
 }
 ```
 
@@ -52,7 +53,7 @@ butacas agarradas sin pagar. `porMedio` trae **siempre los tres medios**
 (`MERCADOPAGO`, `EFECTIVO`, `TRANSFERENCIA`) y `ordenesPorEstado` **siempre los
 cinco estados**, aunque estén en cero — al panel no le tienen que aparecer
 renglones nuevos a medida que avanza la venta. `incidenciasPendientes` es el
-badge de la cola de casos.
+badge de la cola de casos y `erroresPendientes` el de la pantalla de errores.
 
 `entradasAnuladas` va **aparte y no se resta de nada**: la butaca de una anulada
 ya salió de `vendidas` y volvió a `libres` sola. Se muestra igual porque cada una
@@ -311,6 +312,14 @@ persona, y las compras, las entradas y la búsqueda de la puerta cuelgan de él.
 Esto sirve sobre todo para el apellido mal tipeado, que es con lo que se busca a
 alguien en la puerta. No cambia los PDF ya emitidos y no reenvía nada.
 
+**No reescribe todas las compras de ese DNI.** Cada orden guarda una copia
+congelada del comprador, y corregir la ficha sólo la alinea en los campos donde
+esa copia coincidía con el valor viejo. Es a propósito: la misma persona puede
+comprar dos veces con mails distintos, y pisarle el mail a la otra compra le
+sacaba el reenvío por DNI + email a quien lo tenía. Para el front: **después de
+corregir, no asumir que todas las órdenes quedaron con el dato nuevo** — lo que
+devuelve es la ficha, no el estado de las órdenes.
+
 ---
 
 ## Cola de casos
@@ -369,12 +378,24 @@ si ya estaba resuelto.
 { "asientoIds": [201, 202] }
 ```
 
-La única acción que hace algo de verdad: reserva las butacas nuevas, emite las
-entradas, manda el mail y recién después cierra el caso. **La cantidad tiene que
-ser exactamente la que la orden pagó** y no viaja en el body: el backend la
-deriva del cobro. Si no coincide, **422** diciendo cuántas pagó y cuántas se
-mandaron. **409** con `asientosOcupados` si alguna butaca estaba tomada. **422**
-también si el caso ya está resuelto.
+La única acción que hace algo de verdad, y **sirve para los cuatro tipos de
+caso**: mueve la orden entera —suelta todo lo que tiene y vuelve a tomar el total
+que pagó—, emite las entradas, manda el mail y recién después cierra el caso.
+
+**Se piden siempre *todas* las butacas de la orden, no las que faltan**: mandar
+sólo las nuevas da 422. **La cantidad tiene que ser exactamente la que la orden
+pagó** y no viaja en el body: el backend la deriva del cobro. Si no coincide,
+**422** diciendo cuántas pagó y cuántas se mandaron.
+
+**Se reemiten códigos nuevos para todas las entradas, incluso las que no se
+movieron.** Los códigos viejos dejan de servir y cualquier PDF ya descargado
+queda obsoleto; el comprador recibe el juego completo por mail. Si la pantalla
+tenía cacheada la lista de entradas, hay que refrescarla.
+
+**409** con `asientosOcupados` si alguna butaca estaba tomada, y **409** sin
+`asientosOcupados` —`"La entrada ya se uso: no se puede anular"`— si alguna
+entrada de esa orden **ya pasó por la puerta**: ahí se cae la reubicación entera
+y no se toca nada. **422** también si el caso ya está resuelto.
 
 ### `POST /api/admin/incidencias/{id}/resolver` → `204`
 
@@ -386,6 +407,64 @@ Cierra el caso sin reubicar. La nota es **obligatoria**, máximo 500 caracteres:
 se agrega al detalle en vez de pisarlo. Un caso resuelto sin decir qué pasó no
 se puede reconstruir después, que es justo para lo que está la tabla. **422** si
 ya estaba resuelto.
+
+---
+
+## Errores operativos
+
+Lo que se rompió del lado del servidor y necesita una mano. **No son casos**: un
+caso es alguien que pagó y quedó mal sentado y se arregla desde el panel; esto no
+se arregla desde la app —la plata se devuelve por fuera y el mail se reenvía
+desde la orden— y lo único que se hace acá es marcar que alguien ya se ocupó.
+
+### `GET /api/admin/errores?pendientes=true`
+
+`pendientes` es opcional y por defecto `true`. Con `false` trae también los ya
+atendidos. Devuelve un array **ya ordenado**: `URGENTE` arriba y, dentro de cada
+gravedad, lo más nuevo primero. **No hay que reordenar en el front.**
+
+```json
+[{
+  "id": 1,
+  "tipo": "COBRO_DUPLICADO",
+  "gravedad": "URGENTE",
+  "mensaje": "Se cobro dos veces la orden 11. Hay plata que devolver a mano",
+  "detalle": "El intento de pago 5 se aprobo cuando la orden ya estaba pagada",
+  "ordenId": 11,
+  "ruta": null,
+  "ocurrioEl": "2026-08-03T21:15:00-03:00",
+  "atendidoEl": null
+}]
+```
+
+`tipo`: `COBRO_DUPLICADO` · `COBRO_DE_ORDEN_CAIDA` · `COBRO_DEVUELTO` ·
+`MAIL_NO_ENVIADO` (los cuatro `URGENTE`) · `ERROR_INESPERADO` ·
+`COMMIT_FALLIDO` (los dos `REVISAR`). **Los tres `COBRO_*` son plata**: uno
+cobrado dos veces, uno cobrado sobre una compra dada de baja y uno devuelto o
+desconocido.
+
+**`tipo` es una lista abierta y va a crecer**: la columna no tiene `CHECK` en la
+base, así que un tipo nuevo puede aparecer sin aviso y sin migración. **Nada de
+`switch` exhaustivo que explote con un valor desconocido** — si el tipo no está
+mapeado, mostrar el `mensaje` tal cual y pintar la fila por `gravedad`, que sí es
+un conjunto cerrado (`URGENTE` | `REVISAR`).
+
+`ordenId` y `ruta` son **nullables y excluyentes en la práctica**: los urgentes
+traen orden, los de revisar traen ruta. `ruta` es el **patrón** del endpoint, no
+la URL que se pidió: viene `"GET /api/ordenes/{token}/entradas.pdf"` con la llave
+literal. No sirve para abrir nada ni para saber a qué compra le pasó, y es a
+propósito: ahí adentro iría una credencial.
+
+**No viene el token de la orden por ningún campo.** Es la credencial con la que
+se bajan esas entradas y una pantalla se comparte por captura. Para abrir la
+compra hay que buscarla por el comprador. `atendidoEl` nulo = pendiente; no hay
+estado intermedio.
+
+### `POST /api/admin/errores/{id}/atender` → `204`
+
+Sin cuerpo. Es idempotente —apretarlo dos veces no cambia nada— y **no pide
+motivo**, a diferencia de anular una entrada o dar de baja una venta: acá no se
+deshace nada. **404** si el `id` no existe.
 
 ---
 
@@ -427,8 +506,22 @@ el tablero, y siempre después de un 409 por butacas ocupadas.
 
 **Los endpoints que mandan mail son lentos** —`reenviar-entradas`,
 `cambiar-butaca`, `POST /ventas`, `reubicar`—: el backend espera al servidor de
-correo. Timeout de cliente de 30 s para esos cuatro; para el resto, 8 s sobra.
+correo. Timeout de cliente de 30 s para esos cuatro; para el resto, 15 s sobra.
 
 **El historial no dice quién.** Con una sola cuenta compartida queda registrado
 qué se hizo, cuándo y por cuánto; `resueltaPor` guarda el mail de la cuenta, que
 es el mismo siempre.
+
+**Los datos del comprador tienen los mismos límites en todos lados** —acá, en
+`POST /api/admin/ventas`, en `corregir` y en el `POST /api/ordenes` del sitio:
+`nombre` y `apellido` hasta 60, `email` con formato y hasta 254, `celular` de 8 a
+20 caracteres con dígitos y `+ ( ) - espacio`, `dni` de 7 u 8 dígitos sin puntos,
+`asientoIds` de 1 a 100. Fallan como **400** con el detalle por campo en `campos`,
+que es lo que se pinta al lado de cada input.
+
+**Todo error trae el mismo cuerpo** (`status`, `error`, `mensaje`, y `campos` o
+`asientosOcupados` cuando corresponde) **menos el 406**, que llega sin cuerpo: no
+intentar parsearlo. Un **503** no es culpa del pedido —la base no contestó o no
+se pudo abrir la transacción— y se muestra como "reintentá en un rato", no como
+error. Un **409** de deadlock entre dos compradores es reintentable y su
+`mensaje` ya lo dice.

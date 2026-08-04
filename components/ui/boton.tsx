@@ -21,7 +21,10 @@ const base =
   "transition-[background-color,border-color,color,transform,box-shadow] " +
   "duration-200 ease-[var(--ease-salida)] hover:-translate-y-px " +
   "active:translate-y-px " +
-  "disabled:pointer-events-none disabled:opacity-45 aria-disabled:opacity-45";
+  // `aria-disabled` es como se apaga un BotonLink: un <a> no tiene `disabled`,
+  // asi que sin cortarle los eventos se ve apagado y sigue navegando igual.
+  "disabled:pointer-events-none disabled:opacity-45 " +
+  "aria-disabled:pointer-events-none aria-disabled:opacity-45";
 
 const tonos: Record<Tono, string> = {
   // El laton es el unico acento del sistema: solo la accion principal lo usa.
@@ -77,6 +80,28 @@ export function BotonLink({
     <Link {...resto} className={clases(tono, medida, className)}>
       {children}
     </Link>
+  );
+}
+
+/**
+ * El mismo boton, pero `<a>` pelado.
+ *
+ * Para destinos que no son pantallas de la app —una descarga, otro dominio, un
+ * `mailto:`—, donde el router de Next no tiene nada que hacer: `Link` intentaria
+ * una navegacion de cliente contra algo que no es una ruta y terminaria
+ * recargando igual, con un ida y vuelta de mas en el medio.
+ */
+export function BotonAncla({
+  tono = "principal",
+  medida = "base",
+  className,
+  children,
+  ...resto
+}: Comunes & ComponentProps<"a">) {
+  return (
+    <a {...resto} className={clases(tono, medida, className)}>
+      {children}
+    </a>
   );
 }
 

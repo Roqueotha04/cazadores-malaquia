@@ -81,9 +81,13 @@ export function MapaSalon({
         />
       </aside>
 
-      {/* Barra fija: la acción principal siempre al alcance del pulgar. */}
+      {/* Barra fija: la acción principal siempre al alcance del pulgar.
+
+          Se apaga con la misma condición que el plano de escritorio —ancho `lg`
+          y puntero fino— y no solo con el ancho: en una tablet en horizontal el
+          plano sigue siendo el táctil y esta barra tiene que estar. */}
       {detalle.length > 0 && (
-        <div className="fixed inset-x-0 bottom-0 z-[var(--z-barra)] border-t border-line bg-surface-high/95 backdrop-blur-md lg:hidden">
+        <div className="fixed inset-x-0 bottom-0 z-[var(--z-barra)] block border-t border-line bg-surface-high/95 backdrop-blur-md lg:pointer-fine:hidden">
           <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-5 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
             <div>
               <p className="text-xs text-ink-faint tabular">

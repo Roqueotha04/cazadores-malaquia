@@ -9,7 +9,11 @@ const WHATSAPP = "https://api.whatsapp.com/send?phone=542923504014";
  */
 export function PieAyuda() {
   return (
-    <footer className="mt-auto border-t border-line px-5 py-8">
+    /* El `pb` extra es por la barra fija del plano: es `fixed`, tapa los ultimos
+       ~76px de la pagina y con la seleccion hecha se comia justo este WhatsApp,
+       que es la salida de emergencia. Vuelve al padding normal exactamente donde
+       la barra no existe: ancho `lg` y puntero fino. */
+    <footer className="mt-auto border-t border-line px-5 pt-8 pb-28 lg:pointer-fine:pb-8">
       <div className="mx-auto flex max-w-6xl flex-col items-start gap-2 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-sm text-ink-faint">
           ¿Se te complicó algo? Escribinos y lo resolvemos.

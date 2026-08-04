@@ -112,6 +112,18 @@
     line-height: 1.25;
   }
 
+  /* Tailwind v4 saco el `cursor: pointer` de los botones y el default del
+     navegador para <button> es la flecha: sin esta regla ninguna silla del
+     plano, ninguna card de mesa y ningun boton del sitio se siente clickeable.
+     Va acá y no componente por componente porque no hay una sola excepcion. */
+  button:not(:disabled) {
+    cursor: pointer;
+  }
+
+  button:disabled {
+    cursor: not-allowed;
+  }
+
   /* El laton es tambien el color del foco, en todo el sitio. */
   :focus-visible {
     outline: 2px solid var(--color-brass);

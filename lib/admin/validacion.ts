@@ -18,11 +18,18 @@ export const loginSchema = z.object({
 });
 
 /**
+ * Cuantas butacas entran en un solo pedido, en cualquier endpoint que las tome.
+ * Es un limite de la request, no del evento.
+ */
+export const MAX_ASIENTOS_POR_PEDIDO = 100;
+
+/**
  * Carga de una venta cobrada afuera.
  *
- * Sin tope de butacas a proposito: el contrato dice que la carga a mano no
- * valida `maxAsientosPorCompra` ni `ventasAbiertas`. Se puede cargar con la
- * venta cerrada y por encima del maximo.
+ * Sin `maxAsientosPorCompra` a proposito: el contrato dice que la carga a mano
+ * no valida ni el maximo del evento ni `ventasAbiertas`. Se puede cargar con la
+ * venta cerrada y por encima de ese maximo. El unico tope es el de la request,
+ * que el backend rechaza con un 400.
  */
 export const ventaManualSchema = z.object({
   ...contactoComprador,
@@ -32,7 +39,11 @@ export const ventaManualSchema = z.object({
   }),
   asientoIds: z
     .array(z.number().int().positive())
-    .min(1, "Elegí al menos una butaca"),
+    .min(1, "Elegí al menos una butaca")
+    .max(
+      MAX_ASIENTOS_POR_PEDIDO,
+      `Máximo ${MAX_ASIENTOS_POR_PEDIDO} butacas por venta. Cargala en dos.`,
+    ),
 });
 
 /**

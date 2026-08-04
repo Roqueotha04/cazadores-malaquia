@@ -7,6 +7,10 @@ del formulario de compra (sección 5) y los cambios de comportamiento de la fase
 Ningún endpoint cambió de ruta, de método ni de forma. Lo de la sección 6 es **qué contestan ahora**
 en situaciones donde antes contestaban otra cosa.
 
+Las secciones **7 y 8** son posteriores y no son de esas fases: la vuelta del checkout ahora trae el
+token en la ruta, y el PDF de las entradas se puede ofrecer en la pantalla de éxito. Las dos ya están
+aplicadas en este repo — cada una cierra con una nota de cómo quedó.
+
 ---
 
 ## 1. Todo error trae el mismo cuerpo
@@ -242,3 +246,76 @@ DNI + email, y quien tuviera el mail sobreviviente podía pedir entradas ajenas.
   de siempre: contestar distinto lo convertiría en una forma de averiguar quién compró. Se le mejoró
   el manejo de conexiones por dentro, nada más.
 - La pantalla de errores y `GET /api/admin/resumen` siguen igual salvo los dos tipos nuevos de 3.
+
+---
+
+## 7. La vuelta del checkout ahora trae el token en la ruta
+
+Mercado Pago devuelve al comprador a una dirección que **arma el backend por cada pago**, y que lleva
+el token de la orden en la ruta:
+
+```
+https://{front}/checkout/exito/{token}
+https://{front}/checkout/error/{token}
+https://{front}/checkout/pendiente/{token}
+```
+
+La base sale de `mp.front-url`; las tres rutas están fijas en `MercadoPagoClientImpl`. **Si el front
+cambia esos paths, hay que avisar**: son un acuerdo entre los dos proyectos y no hay forma de que el
+backend se entere solo.
+
+**Lo que cambia para el front:** la página de vuelta ya no depende de nada guardado en el navegador
+—`localStorage`, `sessionStorage`— para saber qué compra mostrar. El token está en la URL, así que
+funciona igual si el comprador vuelve en otra pestaña.
+
+MP le pega igual su propio querystring (`?collection_id=...&status=approved&external_reference=...`),
+y eso **no cambió y no se puede desactivar**. Sigue valiendo lo de siempre:
+
+- **De ahí no se lee nada.** Son parámetros del cliente, los escribe cualquiera en la barra de
+  direcciones. Dar la compra por exitosa porque dice `status=approved` es el error clásico.
+- La verdad la contesta `POST /api/ordenes/{token}/reconciliar`, que es lo que hay que llamar al
+  aterrizar. Si el webhook ya había llegado, no le pregunta nada a nadie y responde lo mismo que el
+  GET.
+- El `external_reference` es el id del intento de cobro, **no** el de la orden. No sirve para pedirle
+  nada a esta API.
+
+Para dejar la barra limpia, después de leer alcanza con `history.replaceState({}, "", location.pathname)`.
+
+> **Ya aplicado en este repo.** Las tres rutas viven en `app/(flujo)/checkout/{exito,error,pendiente}/[[...token]]/`
+> y las tres renderizan `components/compra/vuelta-del-checkout.tsx`, que limpia el querystring al
+> montar. El token de la ruta es opcional (`[[...token]]`) y `lib/orden-guardada.ts` quedó como
+> respaldo para las preferencias armadas antes de este cambio. La vieja `/compra/resultado` se borró.
+
+## 8. El PDF de las entradas se puede ofrecer en la página de éxito
+
+El endpoint no es nuevo, sólo aprendió a mostrarse además de bajarse:
+
+```
+GET /api/ordenes/{token}/entradas.pdf               → se descarga  (Content-Disposition: attachment)
+GET /api/ordenes/{token}/entradas.pdf?inline=true   → se abre      (Content-Disposition: inline)
+```
+
+Mismo archivo en los dos casos, y el mismo que llega adjunto al mail: el comprador recibe las dos
+cosas y no hay una versión "de la web" distinta.
+
+**No hace falta `fetch`.** Alcanza con apuntarle un `<a href>` (o un `target="_blank"` con `inline`).
+Bajándolo por JavaScript en cambio entra CORS en juego y el dominio del front tiene que estar
+declarado en el backend, así que el link directo es el camino corto.
+
+**Antes de mostrar el link, confirmar que la compra está paga.** El PDF existe recién cuando hay
+entradas emitidas: al aterrizar en la página de éxito va primero
+`POST /api/ordenes/{token}/reconciliar`, y el link se muestra sólo si contesta `estado: "PAGADA"`.
+Pedirlo antes devuelve **404** con el `ErrorResponse` de siempre y el mensaje
+`"La orden no tiene entradas emitidas"`.
+
+Ese 404 también aparece —y es correcto que aparezca— si el equipo anuló todas las entradas de la
+compra: el PDF sólo arma las vigentes, porque imprimir una butaca anulada sería mandar a alguien a un
+lugar que ya se revendió.
+
+> **Ya aplicado en este repo, con una diferencia buscada.** El link no apunta al backend sino a
+> `/entradas/{token}/entradas.pdf`, un route handler de Next que pide el archivo por `lib/api.ts` y
+> lo reenvía tal cual. Es una navegación del navegador igual —no hay `fetch`, no hay CORS— pero el
+> navegador nunca ve dónde vive el backend, que es la regla de arquitectura del front. Los botones
+> están en la pantalla de entradas, que es adonde `/checkout/exito` manda apenas `reconciliar`
+> contesta `PAGADA`: ahí la compra ya está confirmada. Si el backend contesta 404 o falla, el handler
+> vuelve a `/entradas/{token}?pdf=no` y la pantalla lo dice.
