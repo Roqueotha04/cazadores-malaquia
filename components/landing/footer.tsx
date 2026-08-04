@@ -8,19 +8,13 @@ export function Footer() {
       <div className="mx-auto flex max-w-6xl flex-col gap-8 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <div className="flex items-center gap-3">
-            <Image
-              src={logo}
-              alt=""
-              width={40}
-              height={40}
-              className="size-10"
-            />
+            <Image src={logo} alt="" className="h-10 w-auto" />
             <p className="font-display text-base text-ink">
-              Armería Bonifacio Malaquía
+              Cena de Cazadores y Tiradores
             </p>
           </div>
           <p className="mt-3 text-sm text-ink-faint">
-            Cena de Cazadores 2026 · 2 de octubre
+            6ta Edición · 2 de octubre de 2026 · Bonifacio Malaquía
           </p>
         </div>
 

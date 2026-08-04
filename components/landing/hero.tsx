@@ -43,9 +43,14 @@ export function Hero({
       />
 
       <div className="mx-auto w-full max-w-4xl px-5 pb-14 pt-32 text-center sm:pb-20">
+        {/* La bajada dorada usa titulo-seccion y no el tamaño del h1: antes
+            decia solo "2026" y a la par del titulo funcionaba, pero con la
+            edicion escrita entera compite con el nombre del evento. */}
         <h1 className="entra titulo-hero text-ink">
-          La cena de cazadores
-          <span className="mt-1 block text-brass">2026</span>
+          Cena de Cazadores y Tiradores
+          <span className="titulo-seccion mt-2 block text-brass">
+            6ta Edición · 2026
+          </span>
         </h1>
 
         <p className="entra-2 mx-auto mt-6 max-w-xl text-lg text-ink-soft">

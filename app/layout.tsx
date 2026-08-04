@@ -3,7 +3,7 @@ import { display, sans } from "./fonts";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Cena de Cazadores 2026 · Armería Bonifacio Malaquía",
+  title: "Cena de Cazadores y Tiradores · 6ta Edición 2026",
   description:
     "La cena anual de cazadores. 2 de octubre de 2026. Elegí tu silla y comprá tu entrada online.",
 };
