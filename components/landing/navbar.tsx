@@ -21,9 +21,11 @@ export function Navbar() {
           className="flex shrink-0 items-center gap-3"
           aria-label="Cena de Cazadores y Tiradores, ir al inicio"
         >
-          {/* Alto fijo y ancho automatico: el logo no es cuadrado (2312x2087),
-              asi que un size-* lo achataria. */}
-          <Image src={logo} alt="" className="h-11 w-auto" priority />
+          {/* Alto y no `size-*`: el emblema es apaisado (2312x2087) y en una
+              caja cuadrada se achata. Y 56px no es capricho — es line-art de
+              trazo finisimo y abajo de eso los trazos caen por debajo del pixel
+              y el ciervo se deshace en una mancha gris. */}
+          <Image src={logo} alt="" className="h-14 w-auto" priority />
           <span className="hidden leading-tight sm:block">
             <span className="block whitespace-nowrap font-display text-sm text-ink lg:text-base">
               Cena de Cazadores y Tiradores

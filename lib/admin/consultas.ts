@@ -2,12 +2,19 @@ import "server-only";
 
 import { cache } from "react";
 import { aFecha } from "@/lib/api";
-import { aOrden } from "@/lib/consultas";
+import {
+  aOrden,
+  obtenerEntradasPorToken,
+  obtenerOrdenPorToken,
+} from "@/lib/consultas";
+import { diaClave } from "@/lib/formato";
 import { pedirAdmin, pedirAdminOpcional } from "./api";
 import type {
   Caso,
   CasoJson,
   Cuenta,
+  DiaDeVenta,
+  EntradaVendida,
   ErrorOperativo,
   ErrorOperativoJson,
   EstadoIncidencia,
@@ -21,7 +28,7 @@ import type {
   VentaManual,
   VentaManualJson,
 } from "./tipos";
-import type { EstadoOrden } from "@/lib/tipos";
+import type { Entrada, EstadoOrden } from "@/lib/tipos";
 
 /**
  * Lecturas del panel. Las pantallas solo llaman a estas funciones.
@@ -133,6 +140,141 @@ export async function buscarOrdenes({
 }
 
 export const TOPE_ORDENES = 100;
+
+/**
+ * Las compras pagadas, agrupadas por el dia en que entro la plata.
+ *
+ * **No hay un endpoint que liste entradas.** Esto se arma con la misma lista de
+ * ordenes de arriba, filtrada en `PAGADA`, y de ahi salen todos los encabezados
+ * de la pantalla sin pedir nada mas: la cantidad de butacas de un dia es la suma
+ * de `orden.butacas` y la plata, la de `totalCentavos`.
+ *
+ * Hereda el tope de 100 de `/api/admin/ordenes`, que no tiene paginado ni filtro
+ * por fecha. Por eso devuelve `total`: es lo unico que despues deja avisar que
+ * la lista quedo corta.
+ *
+ * El dia sale de `pagadoEl` en hora de Buenos Aires. Una orden `PAGADA` sin
+ * `pagadoEl` es un dato roto —no deberia existir— y se junta aparte en vez de
+ * caer en un dia inventado.
+ */
+export async function obtenerDiasDeVenta(q?: string): Promise<{
+  dias: DiaDeVenta[];
+  sinFecha: OrdenAdmin[];
+  total: number;
+}> {
+  const { ordenes, total } = await buscarOrdenes({ estado: "PAGADA", q });
+
+  const porDia = new Map<string, DiaDeVenta>();
+  const sinFecha: OrdenAdmin[] = [];
+
+  for (const orden of ordenes) {
+    if (!orden.pagadoEl) {
+      sinFecha.push(orden);
+      continue;
+    }
+
+    const clave = diaClave(orden.pagadoEl);
+    const dia = porDia.get(clave);
+
+    if (dia) {
+      dia.ordenes.push(orden);
+      dia.butacas += orden.butacas;
+      dia.totalCentavos += orden.totalCentavos;
+    } else {
+      porDia.set(clave, {
+        clave,
+        fecha: orden.pagadoEl,
+        ordenes: [orden],
+        butacas: orden.butacas,
+        totalCentavos: orden.totalCentavos,
+      });
+    }
+  }
+
+  // Lo mas nuevo primero, y adentro de cada dia tambien: la pantalla se abre el
+  // dia del evento y lo que interesa es lo ultimo que se vendio.
+  const dias = [...porDia.values()].sort((a, b) => b.clave.localeCompare(a.clave));
+
+  for (const dia of dias) {
+    dia.ordenes.sort(
+      (a, b) => (b.pagadoEl?.getTime() ?? 0) - (a.pagadoEl?.getTime() ?? 0),
+    );
+  }
+
+  return { dias, sinFecha, total };
+}
+
+/**
+ * Las entradas emitidas de un dia, una por butaca.
+ *
+ * Un pedido por orden, todos en paralelo: `/api/ordenes/{token}/entradas` es el
+ * unico lugar donde estan los codigos, y sin codigo no hay ni "cambiar butaca"
+ * ni "anular". La pantalla llama a esto para todos sus dias de una: son cien
+ * pedidos como techo —el tope de la lista de ordenes— y salen juntos.
+ *
+ * Es el endpoint publico, sin token de admin, y es a proposito: el contrato dice
+ * que el detalle de una compra no tiene version admin.
+ *
+ * **Lo de `anulada` es deduccion, no dato.** Ese listado no trae `anuladaEl`,
+ * pero anular devuelve la butaca a la venta y la saca de las que la orden
+ * conserva. Entonces: si el dia trae mas entradas que butacas conservadas, esas
+ * de mas estan anuladas, y para saber *cuales* hay que pedir el detalle de la
+ * orden — que es el unico que lista las butacas que le quedan. Se pide solo para
+ * las ordenes donde los numeros no cierran, que son las pocas que tienen alguna
+ * anulada; en la enorme mayoria no sale ese segundo viaje.
+ *
+ * Si el cruce no cierra —porque el backend ya filtra las anuladas de ese listado,
+ * o porque cambio lo que devuelve— **no se marca ninguna**. Tachar la entrada
+ * equivocada es peor que no tachar ninguna: la de al lado es de otra persona.
+ */
+export async function obtenerEntradasDelDia(
+  ordenes: OrdenAdmin[],
+): Promise<EntradaVendida[]> {
+  const porOrden = await Promise.all(
+    ordenes.map(async (orden) => {
+      const entradas = await obtenerEntradasPorToken(orden.token);
+      const anuladas = await deducirAnuladas(orden, entradas);
+
+      return entradas.map((entrada) => ({
+        ...entrada,
+        anulada: anuladas.has(entrada.asientoNumero),
+        ordenToken: orden.token,
+        dni: orden.dni,
+        comprador: orden.comprador,
+        origen: orden.origen,
+        pagadoEl: orden.pagadoEl,
+      }));
+    }),
+  );
+
+  return porOrden
+    .flat()
+    .sort((a, b) => (b.pagadoEl?.getTime() ?? 0) - (a.pagadoEl?.getTime() ?? 0));
+}
+
+/** Los numeros de butaca anulados de una orden, o vacio si el cruce no cierra. */
+async function deducirAnuladas(
+  orden: OrdenAdmin,
+  entradas: Entrada[],
+): Promise<Set<number>> {
+  const sobran = entradas.length - orden.butacas;
+
+  if (sobran <= 0) return new Set();
+
+  const detalle = await obtenerOrdenPorToken(orden.token);
+
+  if (!detalle) return new Set();
+
+  const conserva = new Set(detalle.butacas.map((butaca) => butaca.numero));
+  const fuera = entradas.filter((e) => !conserva.has(e.asientoNumero));
+
+  // Los numeros tienen que dar exactamente. Si no dan, algo no es lo que
+  // creemos —empezando por que `asientoNumero` y `numero` sean la misma
+  // numeracion— y marcar de mas seria mentir sobre entradas que valen.
+  return fuera.length === sobran
+    ? new Set(fuera.map((e) => e.asientoNumero))
+    : new Set();
+}
 
 /** El historial de lo cobrado a mano, mas nuevo primero. Sin filtros. */
 export async function obtenerVentasManuales(): Promise<VentaManual[]> {

@@ -2,6 +2,9 @@ import type { Metadata, Viewport } from "next";
 import { display, sans } from "./fonts";
 import "./globals.css";
 
+// El icono de la pestaña sale de app/icon.png (y app/apple-icon.png), las dos
+// generadas a partir de public/logo.png: Next las publica solo por estar ahi,
+// con hash en la URL. No hace falta declararlas en `icons`.
 export const metadata: Metadata = {
   title: "Cena de Cazadores y Tiradores · 6ta Edición 2026",
   description:

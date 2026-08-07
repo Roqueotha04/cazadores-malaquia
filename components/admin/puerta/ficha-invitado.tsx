@@ -1,16 +1,13 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import Link from "next/link";
 import { Boton } from "@/components/ui/boton";
 import { hora, ubicacion } from "@/lib/formato";
 import {
-  anularEntrada,
   validarEntrada,
   type EntradaValidada,
 } from "@/lib/admin/acciones/puerta";
 import type { EntradaInvitado, Invitado } from "@/lib/admin/tipos";
-import { AccionConfirmada } from "../ui/accion-confirmada";
 import { Aviso, Pildora } from "../ui/piezas";
 
 /**
@@ -167,42 +164,17 @@ function Entrada({
         </div>
       )}
 
+      {/* Un solo boton, y es el unico que tiene sentido acá.
+
+          "Cambiar butaca" y "Anular" vivian en esta ficha y se fueron a la
+          pantalla de Entradas: las dos se hacen sentado, con tiempo, y una pide
+          escribir un motivo. Acá hay alguien esperando adelante, de noche y de
+          pie, y tenerlas al lado del boton grande era invitar a errarle. */}
       {!anulada && !usada && !validada && (
-        <div className="mt-4 flex flex-wrap items-start gap-2">
+        <div className="mt-4">
           <Boton onClick={validar} cargando={validando} disabled={validando}>
             {validando ? "Validando…" : "Validar y dejar pasar"}
           </Boton>
-
-          <Link
-            href={`/admin/puerta/${entrada.codigo}/butaca?mesa=${entrada.mesaNumero}&silla=${entrada.asientoNumero}`}
-            className="inline-flex min-h-11 items-center rounded-sm border border-line-strong px-5 text-sm text-ink-soft transition-colors duration-200 hover:border-brass hover:text-ink"
-          >
-            Cambiar butaca
-          </Link>
-
-          <AccionConfirmada
-            etiqueta="Anular"
-            confirmar="Sí, anular la entrada"
-            tono="fantasma"
-            medida="base"
-            accion={anularEntrada.bind(null, entrada.codigo)}
-            motivo={{
-              rotulo: "Por qué se anula",
-              ayuda:
-                "Queda asentado. Anular no devuelve la plata: el reintegro lo hace el equipo a mano, y esto es lo único que después explica por qué.",
-              placeholder: "El invitado avisó que no viene",
-            }}
-            pregunta={
-              <>
-                La butaca{" "}
-                <strong className="text-ink">
-                  {ubicacion(entrada.mesaNumero, entrada.asientoNumero)}
-                </strong>{" "}
-                vuelve a la venta y esta entrada deja de valer. El código que
-                tenga impreso o en el teléfono no va a servir más.
-              </>
-            }
-          />
         </div>
       )}
     </li>
