@@ -136,4 +136,16 @@ export const eventoSchema = z.object({
     .int()
     .min(MIN_RESERVA, `Mínimo ${MIN_RESERVA} minutos`)
     .max(MAX_RESERVA, `Máximo ${MAX_RESERVA} minutos`),
+  // String primero, no z.coerce.number: el backend rechaza más de 2 decimales
+  // en vez de redondear, y comparar decimales como float (v * 100) es
+  // justo el tipo de cosa que falla por redondeo binario (4.005 -> 400.4999...).
+  // Chequear la forma del texto tal como lo tipeó la persona es lo único
+  // confiable.
+  tarifaServicioPorcentaje: z
+    .string()
+    .trim()
+    .min(1, "Ingresá el porcentaje de tarifa de servicio")
+    .regex(/^\d{1,3}(\.\d{1,2})?$/, "Admite hasta dos decimales")
+    .transform(Number)
+    .refine((v) => v <= 100, "No puede pasar de 100"),
 });

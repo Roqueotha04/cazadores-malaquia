@@ -66,8 +66,20 @@ export type Resumen = {
     entradasAnuladas: number;
   };
   recaudacion: {
+    /** Bruto: suma de los cobros aprobados, lo que pagó cada comprador. */
     totalCentavos: number;
-    porMedio: { medio: MedioPago; totalCentavos: number; cantidad: number }[];
+    /**
+     * Bruto menos la tarifa de servicio: lo que efectivamente entra a la
+     * cuenta. En ventas cargadas a mano coincide con el bruto — ahí no hay
+     * tarifa que descontar.
+     */
+    netoCentavos: number;
+    porMedio: {
+      medio: MedioPago;
+      totalCentavos: number;
+      netoCentavos: number;
+      cantidad: number;
+    }[];
     ordenesPorEstado: { estado: EstadoOrden; cantidad: number }[];
   };
   incidenciasPendientes: number;

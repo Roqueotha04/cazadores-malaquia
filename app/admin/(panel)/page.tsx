@@ -165,11 +165,16 @@ export default async function TableroPage() {
       </Panel>
 
       <Panel titulo="Recaudación">
-        <div className="border-b border-line p-5">
+        <div className="grid gap-5 border-b border-line p-5 sm:grid-cols-2">
           <Cifra
-            rotulo="Total cobrado"
+            rotulo="Bruto"
             valor={precio(recaudacion.totalCentavos)}
             nota="Suma de los cobros aprobados, no de precio × butacas."
+          />
+          <Cifra
+            rotulo="Neto"
+            valor={precio(recaudacion.netoCentavos)}
+            nota="Bruto menos la tarifa de servicio: lo que entra a la cuenta."
           />
         </div>
 
@@ -181,7 +186,7 @@ export default async function TableroPage() {
               valor={dato?.totalCentavos ?? 0}
               maximo={maximoMedio}
               cifra={precio(dato?.totalCentavos ?? 0)}
-              nota={leyendaMedio(medio, dato?.cantidad ?? 0)}
+              nota={leyendaMedio(medio, dato)}
             />
           ))}
         </div>
@@ -216,12 +221,20 @@ function porcentaje(parte: number, total: number) {
   return `${Math.round((parte / total) * 100)} %`;
 }
 
-function leyendaMedio(medio: MedioPago, cantidad: number) {
+function leyendaMedio(
+  medio: MedioPago,
+  dato?: { totalCentavos: number; netoCentavos: number; cantidad: number },
+) {
+  const cantidad = dato?.cantidad ?? 0;
   const cobros = cantidad === 1 ? "1 cobro" : `${cantidad} cobros`;
+  const base =
+    medio === "MERCADOPAGO" ? `${cobros} por la web` : `${cobros} cargados a mano`;
 
-  return medio === "MERCADOPAGO"
-    ? `${cobros} por la web`
-    : `${cobros} cargados a mano`;
+  // Sólo Mercado Pago cobra comisión: en efectivo y transferencia el neto
+  // siempre coincide con el bruto, y repetirlo ahí es ruido.
+  if (!dato || dato.netoCentavos === dato.totalCentavos) return base;
+
+  return `${base} · ${precio(dato.netoCentavos)} netos`;
 }
 
 const LEYENDA_ESTADO: Record<EstadoOrden, string> = {

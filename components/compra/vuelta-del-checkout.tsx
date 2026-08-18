@@ -324,6 +324,13 @@ export function VueltaDelCheckout({
 }
 
 function Detalle({ orden }: { orden: Orden }) {
+  const cantidad = orden.butacas.length;
+  const conTarifa = orden.tarifaServicioUnitarioCentavos > 0;
+  const entradasCentavos =
+    (orden.precioUnitarioCentavos - orden.tarifaServicioUnitarioCentavos) *
+    cantidad;
+  const tarifaCentavos = orden.tarifaServicioUnitarioCentavos * cantidad;
+
   return (
     <div className="mt-8 rounded-sm border border-line bg-surface-raised px-5 py-4">
       <p className="dato">Tu compra</p>
@@ -337,11 +344,27 @@ function Detalle({ orden }: { orden: Orden }) {
           </li>
         ))}
       </ul>
-      <div className="mt-4 flex items-baseline justify-between gap-4 border-t border-line pt-3.5">
-        <span className="dato">Total</span>
-        <span className="font-display text-xl text-ink tabular">
-          {precio(orden.totalCentavos)}
-        </span>
+      <div className="mt-4 border-t border-line pt-3.5">
+        {conTarifa && (
+          <>
+            <div className="flex items-baseline justify-between gap-4 text-sm text-ink-soft">
+              <span>{cantidad === 1 ? "Entrada" : "Entradas"}</span>
+              <span className="tabular">{precio(entradasCentavos)}</span>
+            </div>
+            <div className="mt-1 flex items-baseline justify-between gap-4 text-sm text-ink-soft">
+              <span>Tarifa de servicio</span>
+              <span className="tabular">{precio(tarifaCentavos)}</span>
+            </div>
+          </>
+        )}
+        <div
+          className={`flex items-baseline justify-between gap-4 ${conTarifa ? "mt-2 border-t border-line pt-2" : ""}`}
+        >
+          <span className="dato">Total</span>
+          <span className="font-display text-xl text-ink tabular">
+            {precio(orden.totalCentavos)}
+          </span>
+        </div>
       </div>
     </div>
   );

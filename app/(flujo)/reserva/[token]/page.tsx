@@ -25,6 +25,15 @@ export default async function Reserva(props: PageProps<"/reserva/[token]">) {
 
   const vencida = orden.estado !== "ACTIVA" || !limite || limite <= new Date();
 
+  const cantidad = orden.butacas.length;
+  /* En ventas cargadas a mano siempre es 0. Con 0% de tarifa tambien, y ahi no
+     tiene sentido mostrar un renglon "Tarifa de servicio $0". */
+  const conTarifa = orden.tarifaServicioUnitarioCentavos > 0;
+  const entradasCentavos =
+    (orden.precioUnitarioCentavos - orden.tarifaServicioUnitarioCentavos) *
+    cantidad;
+  const tarifaCentavos = orden.tarifaServicioUnitarioCentavos * cantidad;
+
   if (vencida) {
     return (
       <div className="mx-auto w-full max-w-2xl px-5 py-16">
@@ -92,11 +101,27 @@ export default async function Reserva(props: PageProps<"/reserva/[token]">) {
             ))}
           </ul>
 
-          <div className="mt-6 flex items-baseline justify-between gap-4 border-t border-line pt-5">
-            <span className="dato">Total a pagar</span>
-            <span className="font-display text-3xl text-ink tabular">
-              {precio(orden.totalCentavos)}
-            </span>
+          <div className="mt-6 border-t border-line pt-5">
+            {conTarifa && (
+              <>
+                <div className="flex items-baseline justify-between gap-4 text-sm text-ink-soft">
+                  <span>{cantidad === 1 ? "Entrada" : "Entradas"}</span>
+                  <span className="tabular">{precio(entradasCentavos)}</span>
+                </div>
+                <div className="mt-1.5 flex items-baseline justify-between gap-4 text-sm text-ink-soft">
+                  <span>Tarifa de servicio</span>
+                  <span className="tabular">{precio(tarifaCentavos)}</span>
+                </div>
+              </>
+            )}
+            <div
+              className={`flex items-baseline justify-between gap-4 ${conTarifa ? "mt-3 border-t border-line pt-3" : ""}`}
+            >
+              <span className="dato">Total a pagar</span>
+              <span className="font-display text-3xl text-ink tabular">
+                {precio(orden.totalCentavos)}
+              </span>
+            </div>
           </div>
         </div>
       </div>

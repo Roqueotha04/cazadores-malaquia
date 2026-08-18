@@ -28,12 +28,13 @@ const CAMPOS = [
   "precio",
   "maxAsientosPorCompra",
   "minutosReserva",
+  "tarifaServicioPorcentaje",
 ] as const;
 
 /**
  * Guardar la configuracion.
  *
- * Es un reemplazo completo, no un parche: los seis campos viajan siempre, por
+ * Es un reemplazo completo, no un parche: los siete campos viajan siempre, por
  * eso el formulario se precarga con lo que devuelve `GET /api/evento`.
  */
 export async function guardarEvento(

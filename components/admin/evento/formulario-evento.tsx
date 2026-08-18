@@ -21,7 +21,7 @@ const INICIAL: EstadoEvento = {};
  * La configuracion del evento.
  *
  * Precargado con lo que devuelve `GET /api/evento` porque el endpoint es un
- * **reemplazo completo, no un parche**: los seis campos viajan siempre. Un campo
+ * **reemplazo completo, no un parche**: los siete campos viajan siempre. Un campo
  * que se deje vacio no significa "dejalo como estaba".
  *
  * El precio se tipea en pesos y viaja en centavos: nadie escribe 3500000 para
@@ -85,6 +85,23 @@ export function FormularioEvento({ evento }: { evento: Evento }) {
           ayuda="En pesos enteros. Cambiarlo no toca las órdenes ya creadas: cada una tiene congelado el precio que se le mostró al comprador."
         />
 
+        <Campo
+          id="tarifaServicioPorcentaje"
+          name="tarifaServicioPorcentaje"
+          rotulo="Tarifa de servicio"
+          type="number"
+          inputMode="decimal"
+          min={0}
+          max={100}
+          step={0.01}
+          required
+          defaultValue={
+            previo?.tarifaServicioPorcentaje ?? evento.tarifaServicioPorcentaje
+          }
+          error={estado.errores?.tarifaServicioPorcentaje?.[0]}
+          ayuda="Porcentaje sobre el precio, hasta dos decimales (ej. 4.00 para 4%). Cubre la comisión de Mercado Pago; se suma aparte al confirmar la compra, no en el plano. Cambiarla tampoco toca las órdenes ya creadas."
+        />
+
         <div className="grid gap-5 sm:grid-cols-2">
           <Campo
             id="maxAsientosPorCompra"
@@ -121,7 +138,7 @@ export function FormularioEvento({ evento }: { evento: Evento }) {
 
         <div className="border-t border-line pt-5">
           <Boton type="submit" cargando={enviando} disabled={enviando}>
-            {enviando ? "Guardando…" : "Guardar los seis campos"}
+            {enviando ? "Guardando…" : "Guardar los siete campos"}
           </Boton>
           <p className="mt-3 text-xs text-ink-faint">
             Se guardan todos juntos: lo que no toques igual se vuelve a escribir

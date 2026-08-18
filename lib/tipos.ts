@@ -27,6 +27,12 @@ export type Evento = {
   fecha: Date | null;
   lugar: string | null;
   precioCentavos: number;
+  /**
+   * De 0 a 100, hasta 2 decimales (ej. 4.00 para 4%). Cubre la comisión que
+   * cobra Mercado Pago; no se muestra en el plano ni al elegir sillas, solo
+   * a partir de que existe una orden (ver `Orden.tarifaServicioUnitarioCentavos`).
+   */
+  tarifaServicioPorcentaje: number;
   maxAsientosPorCompra: number;
   minutosReserva: number;
   ventasAbiertas: boolean;
@@ -100,6 +106,13 @@ export type Orden = {
   origen?: OrigenOrden;
   /** Congelado al crear la orden: vale lo que se le mostro al comprador. */
   precioUnitarioCentavos: number;
+  /**
+   * Parte de `precioUnitarioCentavos` que es tarifa de servicio, ya congelada.
+   * La entrada sola es `precioUnitarioCentavos - tarifaServicioUnitarioCentavos`.
+   * En ventas cargadas a mano siempre es 0: ahi no hay comision de Mercado Pago
+   * que cubrir.
+   */
+  tarifaServicioUnitarioCentavos: number;
   totalCentavos: number;
   creadoEl: Date | null;
   /** `null` cuando la orden ya esta pagada: esa reserva no vence nunca mas. */
