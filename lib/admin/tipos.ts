@@ -40,6 +40,25 @@ export type Cuenta = {
   nombre: string;
 };
 
+// ------------------------------------------------------------------ Evento
+
+/**
+ * El corte de venta. `GET /api/admin/evento/tope` y `POST` del mismo, misma
+ * forma en los dos.
+ *
+ * `topeVendidas: null` es "no hay corte": la web vende sin más límite que el
+ * interruptor general (`ventasAbiertas`). Con un corte activo, la venta frena
+ * en `lineaDeCorte` (= `topeVendidas - margen`) y no en `topeVendidas`: ese es
+ * el número que hay que mostrar, el margen es colchón para las compras que ya
+ * estaban en curso cuando se llega ahí.
+ */
+export type Tope = {
+  topeVendidas: number | null;
+  margen: number | null;
+  lineaDeCorte: number | null;
+  butacasOcupadas: number;
+};
+
 // ---------------------------------------------------------------- Tablero
 
 /**

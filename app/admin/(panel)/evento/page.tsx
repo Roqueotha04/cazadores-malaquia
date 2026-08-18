@@ -1,14 +1,17 @@
 import { obtenerEvento } from "@/lib/consultas";
 import { requerirSesion } from "@/lib/admin/sesion";
+import { obtenerTope } from "@/lib/admin/consultas";
 import { abrirVentas, cerrarVentas } from "@/lib/admin/acciones/evento";
 import { FormularioEvento } from "@/components/admin/evento/formulario-evento";
+import { FormularioTope } from "@/components/admin/evento/formulario-tope";
 import { AccionConfirmada } from "@/components/admin/ui/accion-confirmada";
 import { Encabezado, Panel } from "@/components/admin/ui/piezas";
 
 export const metadata = { title: "Evento" };
 
 /**
- * La configuracion del evento y el interruptor de la venta.
+ * La configuracion del evento, el interruptor de la venta y el corte
+ * automatico.
  *
  * El interruptor esta acá y tambien en la barra superior del panel: cerrar la
  * venta es lo que se hace con apuro cuando algo va mal, y en ese momento nadie
@@ -17,7 +20,7 @@ export const metadata = { title: "Evento" };
 export default async function EventoPage() {
   await requerirSesion();
 
-  const evento = await obtenerEvento();
+  const [evento, tope] = await Promise.all([obtenerEvento(), obtenerTope()]);
 
   return (
     <>
@@ -77,6 +80,8 @@ export default async function EventoPage() {
           )}
         </div>
       </Panel>
+
+      <FormularioTope tope={tope} maxAsientosPorCompra={evento.maxAsientosPorCompra} />
 
       <FormularioEvento evento={evento} />
     </>

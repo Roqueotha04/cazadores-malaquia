@@ -25,6 +25,7 @@ import type {
   OrdenAdmin,
   OrdenAdminJson,
   Resumen,
+  Tope,
   VentaManual,
   VentaManualJson,
 } from "./tipos";
@@ -54,6 +55,16 @@ export const obtenerCuenta = cache(async (): Promise<Cuenta> => {
 export const obtenerResumen = cache(async (): Promise<Resumen> => {
   return pedirAdmin<Resumen>("/api/admin/resumen");
 });
+
+/**
+ * El corte de venta vigente. La pantalla de Evento precarga el resto del
+ * formulario con el público `GET /api/evento` (`obtenerEvento` de
+ * `lib/consultas.ts`); esto es lo único que pasa por acá, porque el corte es
+ * información operativa que esa ruta pública no expone.
+ */
+export async function obtenerTope(): Promise<Tope> {
+  return pedirAdmin<Tope>("/api/admin/evento/tope");
+}
 
 /**
  * Busqueda de la puerta: acepta DNI, apellido o numero de butaca, y el front no
