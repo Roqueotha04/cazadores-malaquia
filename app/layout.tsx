@@ -16,9 +16,9 @@ export const metadata: Metadata = {
   metadataBase: new URL("https://cenacazadoresytiradores.com"),
   title: TITULO,
   description: DESCRIPCION,
-  // La imagen sale de public/hero.webp, recortada a 1200x630 (public/og.jpg):
-  // es lo que WhatsApp e Instagram muestran al compartir el link. Sin esto la
-  // vista previa sale pelada, sin foto.
+  // public/og.jpg: captura de la landing (navbar + hero), 1200x630. Es lo que
+  // WhatsApp e Instagram muestran al compartir el link. Sin esto la vista
+  // previa sale pelada, sin foto.
   openGraph: {
     type: "website",
     locale: "es_AR",
@@ -31,7 +31,7 @@ export const metadata: Metadata = {
         url: "/og.jpg",
         width: 1200,
         height: 630,
-        alt: "El salón lleno durante la cena de cazadores del año pasado",
+        alt: "Cena de Cazadores y Tiradores, 6ta Edición 2026",
       },
     ],
   },
