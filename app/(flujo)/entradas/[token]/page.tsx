@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { BotonImprimir } from "@/components/compra/boton-imprimir";
@@ -9,6 +10,10 @@ import {
   obtenerOrdenPorToken,
 } from "@/lib/consultas";
 import { fechaEvento, precio } from "@/lib/formato";
+
+// Lleva nombre y mail del comprador en una URL con token: no tiene sentido
+// que la indexe un buscador.
+export const metadata: Metadata = { robots: { index: false, follow: false } };
 
 export default async function Entradas(props: PageProps<"/entradas/[token]">) {
   const { token } = await props.params;

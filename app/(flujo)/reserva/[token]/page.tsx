@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { Contador } from "@/components/compra/contador";
 import { BotonPagar } from "@/components/compra/boton-pagar";
@@ -8,6 +9,10 @@ import { COLCHON_PAGO_MS } from "@/lib/constantes";
 import { obtenerOrdenPorToken } from "@/lib/consultas";
 import { precio, ubicacion } from "@/lib/formato";
 import { titularDe } from "@/lib/tipos";
+
+// Lleva nombre y mail del comprador en una URL con token: no tiene sentido
+// que la indexe un buscador.
+export const metadata: Metadata = { robots: { index: false, follow: false } };
 
 export default async function Reserva(props: PageProps<"/reserva/[token]">) {
   const { token } = await props.params;
