@@ -2,10 +2,45 @@ import type { Metadata, Viewport } from "next";
 import { display, sans } from "./fonts";
 import "./globals.css";
 
+// El icono de la pestaña sale de app/icon.png (y app/apple-icon.png), las dos
+// generadas a partir de public/logo.png: Next las publica solo por estar ahi,
+// con hash en la URL. No hace falta declararlas en `icons`.
+const TITULO = "Cena de Cazadores y Tiradores · 6ta Edición 2026";
+const DESCRIPCION =
+  "La cena anual de cazadores. 2 de octubre de 2026. Elegí tu silla y comprá tu entrada online.";
+
 export const metadata: Metadata = {
-  title: "Cena de Cazadores y Tiradores · 6ta Edición 2026",
-  description:
-    "La cena anual de cazadores. 2 de octubre de 2026. Elegí tu silla y comprá tu entrada online.",
+  // Sin esto Next no puede armar las URLs absolutas que piden Open Graph y
+  // Twitter (la imagen, el `url` de cada red). Cambia el día del deploy si el
+  // dominio final no es este.
+  metadataBase: new URL("https://cenacazadoresytiradores.com"),
+  title: TITULO,
+  description: DESCRIPCION,
+  // public/og.jpg: captura de la landing (navbar + hero), 1200x630. Es lo que
+  // WhatsApp e Instagram muestran al compartir el link. Sin esto la vista
+  // previa sale pelada, sin foto.
+  openGraph: {
+    type: "website",
+    locale: "es_AR",
+    url: "/",
+    siteName: "Cena de Cazadores y Tiradores",
+    title: TITULO,
+    description: DESCRIPCION,
+    images: [
+      {
+        url: "/og.jpg",
+        width: 1200,
+        height: 630,
+        alt: "Cena de Cazadores y Tiradores, 6ta Edición 2026",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: TITULO,
+    description: DESCRIPCION,
+    images: ["/og.jpg"],
+  },
 };
 
 export const viewport: Viewport = {

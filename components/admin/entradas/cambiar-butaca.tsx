@@ -25,10 +25,13 @@ export function CambiarButaca({
   codigo,
   mesas,
   actual,
+  volver,
 }: {
   codigo: string;
   mesas: Mesa[];
   actual: { mesa: number; silla: number } | null;
+  /** A donde se vuelve al terminar: la lista, con el dia que se estaba viendo. */
+  volver: string;
 }) {
   const router = useRouter();
   const { elegidos, detalle, ids, ubicaciones, alternar, topeAlcanzado } =
@@ -77,8 +80,8 @@ export function CambiarButaca({
             impreso dice la butaca vieja.
           </Aviso>
           <div className="mt-4 flex flex-wrap gap-2">
-            <Boton onClick={() => router.push("/admin/puerta")}>
-              Volver a la puerta
+            <Boton onClick={() => router.push(volver)}>
+              Volver a las entradas
             </Boton>
           </div>
         </div>

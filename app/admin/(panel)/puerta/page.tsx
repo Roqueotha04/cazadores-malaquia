@@ -1,8 +1,18 @@
 import { Suspense } from "react";
-import { TOPE_INVITADOS, buscarInvitados } from "@/lib/admin/consultas";
+import {
+  TOPE_INVITADOS,
+  buscarInvitados,
+  obtenerResumen,
+} from "@/lib/admin/consultas";
 import { Buscador } from "@/components/admin/ui/buscador";
 import { FichaInvitado } from "@/components/admin/puerta/ficha-invitado";
-import { Encabezado, Panel, Vacio } from "@/components/admin/ui/piezas";
+import { Refresco } from "@/components/admin/ui/refresco";
+import {
+  BarraApilada,
+  Encabezado,
+  Panel,
+  Vacio,
+} from "@/components/admin/ui/piezas";
 
 export const metadata = { title: "Puerta" };
 
@@ -30,6 +40,10 @@ export default async function PuertaPage({
         bajada="Buscá por DNI, apellido o número de butaca y validá la entrada. Mirá siempre si alguna aparece anulada."
       />
 
+      <Suspense fallback={null}>
+        <Recuento />
+      </Suspense>
+
       <Panel>
         <div className="p-4 sm:p-5">
           <Suspense fallback={null}>
@@ -46,6 +60,67 @@ export default async function PuertaPage({
         <Resultados q={q ?? ""} />
       </Suspense>
     </>
+  );
+}
+
+/**
+ * Cuanta gente entro, la noche del evento.
+ *
+ * Es la unica cifra de la pantalla y va arriba de todo: la puerta pasa la noche
+ * en esta pantalla y la pregunta que le hacen desde adentro del salon es siempre
+ * la misma —cuantos faltan—. Sin esto hay que ir al tablero y volver.
+ *
+ * Se refresca sola cada dos minutos, y validar una entrada la actualiza en el
+ * acto: `validarEntrada` llama a `refresh()`. Dos minutos y no uno porque nadie
+ * mira el numero fijo, se lo consulta cada tanto.
+ */
+async function Recuento() {
+  const { butacas } = await obtenerResumen();
+
+  const entraron = butacas.entradasUsadas;
+  const faltan = Math.max(butacas.vendidas - entraron, 0);
+  const porcentaje =
+    butacas.vendidas > 0 ? Math.round((entraron / butacas.vendidas) * 100) : 0;
+
+  return (
+    <Panel
+      titulo="Cuánta gente entró"
+      acciones={<Refresco cada={120} />}
+    >
+      <div className="p-5">
+        <p className="font-display text-4xl text-ink tabular">
+          {entraron}
+          <span className="text-2xl text-ink-faint"> / {butacas.vendidas}</span>
+        </p>
+        <p className="mt-1 text-sm text-ink-soft tabular">
+          {porcentaje}% de las entradas emitidas · faltan {faltan}
+        </p>
+
+        <div className="mt-5">
+          <BarraApilada
+            total={butacas.vendidas}
+            tramos={[
+              { rotulo: "Entraron", valor: entraron, clase: "bg-brass" },
+              { rotulo: "Faltan", valor: faltan, clase: "bg-surface-high" },
+            ]}
+          />
+        </div>
+
+        {/* Una anulada no esta ni adentro ni por venir: su butaca ya volvio a la
+            venta. Sale del recuento a proposito, pero se dice, porque si no la
+            cuenta de arriba no cierra contra el tablero. */}
+        {butacas.entradasAnuladas > 0 && (
+          <p className="mt-4 border-t border-line pt-4 text-xs text-ink-faint">
+            {butacas.entradasAnuladas}{" "}
+            {butacas.entradasAnuladas === 1
+              ? "entrada anulada, que no"
+              : "entradas anuladas, que no"}{" "}
+            {butacas.entradasAnuladas === 1 ? "cuenta" : "cuentan"} en este
+            total: esas butacas ya no dan derecho a entrar.
+          </p>
+        )}
+      </div>
+    </Panel>
   );
 }
 

@@ -42,8 +42,12 @@ app/
 │
 └── admin/        ── PANEL ──   una sola cuenta compartida
     ├── login/ · salir/         `salir` es un route handler: borra la cookie
-    └── (panel)/                tablero + ordenes/ ventas/ puerta/ evento/ casos/
-                                y errores/ — cobros mal contados y mails que no salieron
+    └── (panel)/                tablero + entradas/ ordenes/ ventas/ puerta/ evento/
+                                casos/ y errores/ — cobros mal contados y mails
+                                que no salieron.
+                                `entradas/` no tiene endpoint propio: se arma con
+                                la lista de órdenes pagadas + el detalle público de
+                                cada compra. Ver `obtenerDiasDeVenta`.
 
 components/
 ├── landing/    hero, navbar, footer, sobre-nosotros, contacto, formulario-contacto
@@ -68,6 +72,17 @@ lib/
 proxy.ts     middleware de Next 16: chequeo de cookie en /admin/**
 sql/         01_schema.sql (9 tablas, fuente canónica) + 02_seed.sql (730 asientos)
 public/      hero.webp, sobre-nosotros.webp, equipo.webp, extra.webp, logo.png
+             + los cuatro logos del footer (patrocinador-*, logo-mew3,
+             logo-estudio-ve). El icono de la pestaña son app/icon.png y
+             app/apple-icon.png, generados a mano desde public/logo.png.
+             Los originales sin comprimir viven en design/ (gitignored).
+             ⚠️ `logo.png` es line-art apaisado (2312×2087) de trazo finísimo:
+             nunca en caja cuadrada (`size-*`) y nunca abajo de 56px de alto —
+             los trazos caen por debajo del pixel y queda una mancha gris. Por
+             eso los íconos no son un `resize` a secas: se engordan los trazos
+             componiendo la imagen sobre sí misma corrida un pixel en las ocho
+             direcciones, y recién ahí se achican a 96 y 180. Si se rehacen sin
+             ese paso, a 32px el ciervo desaparece.
 .mcp.json    servidor MCP de Supabase (compartido; los permisos no)
 
 Docs en la raíz: README.md · PRODUCT.md · LOGICA-BACKEND.md · AGENTS.md

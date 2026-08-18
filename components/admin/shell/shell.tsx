@@ -11,13 +11,14 @@ import { usePathname } from "next/navigation";
  * seccion esta abierta— y todo lo que trae datos entra como slot ya renderizado
  * en el servidor. Asi el shell no arrastra ninguna consulta al bundle.
  *
- * La navegacion es de texto, sin iconos. Con seis secciones un set de iconos no
- * agrega lectura y si agrega una familia visual mas que mantener coherente; el
- * rotulo escrito no se malinterpreta.
+ * La navegacion es de texto, sin iconos. Con esta cantidad de secciones un set
+ * de iconos no agrega lectura y si agrega una familia visual mas que mantener
+ * coherente; el rotulo escrito no se malinterpreta.
  */
 
 const SECCIONES = [
   { href: "/admin", nombre: "Tablero" },
+  { href: "/admin/entradas", nombre: "Entradas" },
   { href: "/admin/puerta", nombre: "Puerta" },
   { href: "/admin/ordenes", nombre: "Órdenes" },
   { href: "/admin/ventas", nombre: "Ventas a mano" },
@@ -143,7 +144,7 @@ export function Shell({
 function Marca() {
   return (
     <div className="flex h-14 shrink-0 items-center border-b border-line px-5">
-      <p className="font-display text-lg leading-none text-ink">Malaquía</p>
+      <p className="font-display text-lg leading-none text-ink">Cena 2026</p>
     </div>
   );
 }

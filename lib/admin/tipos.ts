@@ -40,6 +40,25 @@ export type Cuenta = {
   nombre: string;
 };
 
+// ------------------------------------------------------------------ Evento
+
+/**
+ * El corte de venta. `GET /api/admin/evento/tope` y `POST` del mismo, misma
+ * forma en los dos.
+ *
+ * `topeVendidas: null` es "no hay corte": la web vende sin más límite que el
+ * interruptor general (`ventasAbiertas`). Con un corte activo, la venta frena
+ * en `lineaDeCorte` (= `topeVendidas - margen`) y no en `topeVendidas`: ese es
+ * el número que hay que mostrar, el margen es colchón para las compras que ya
+ * estaban en curso cuando se llega ahí.
+ */
+export type Tope = {
+  topeVendidas: number | null;
+  margen: number | null;
+  lineaDeCorte: number | null;
+  butacasOcupadas: number;
+};
+
 // ---------------------------------------------------------------- Tablero
 
 /**
@@ -192,6 +211,47 @@ export type InvitadoJson = Omit<Invitado, "entradas"> & {
     usadoEl: string | null;
     anuladaEl: string | null;
   })[];
+};
+
+// -------------------------------------------------------------- Entradas
+//
+// La pantalla de Entradas no tiene un endpoint propio: se arma con
+// `GET /api/admin/ordenes?estado=PAGADA` para los dias y con el
+// `GET /api/ordenes/{token}/entradas` publico para las butacas de cada compra.
+// Por eso estos dos tipos son del front y no llegan asi de ningun lado.
+
+/** Una entrada emitida, con de que compra salio. */
+export type EntradaVendida = {
+  codigo: string;
+  mesaNumero: number;
+  asientoNumero: number;
+  /** Copia congelada de a quien se le vendio esa compra. */
+  titular: string;
+  /** `null` hasta que la escanean en la puerta. */
+  usadoEl: Date | null;
+  /**
+   * Dada de baja. **Se deduce, no viene**: el listado de entradas no trae
+   * `anuladaEl`, asi que se cruza con las butacas que la orden conserva. Es
+   * `false` siempre que ese cruce no cierre — ver `obtenerEntradasDelDia`.
+   */
+  anulada: boolean;
+  ordenToken: string;
+  dni: string;
+  comprador: string;
+  origen: OrigenOrden;
+  pagadoEl: Date | null;
+};
+
+/** Un dia de venta con sus compras. Las entradas se piden al abrirlo. */
+export type DiaDeVenta = {
+  /** "2026-09-30" en hora de Buenos Aires. Es lo que viaja en la URL. */
+  clave: string;
+  /** El instante del primer pago del dia. Solo para escribir el encabezado. */
+  fecha: Date;
+  ordenes: OrdenAdmin[];
+  /** Butacas que las ordenes del dia conservan. Sale de la lista, sin pedir nada. */
+  butacas: number;
+  totalCentavos: number;
 };
 
 // ---------------------------------------------------------------- Ordenes

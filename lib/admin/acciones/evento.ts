@@ -4,6 +4,7 @@ import { refresh } from "next/cache";
 import { z } from "zod";
 import { enviarAdmin } from "../api";
 import { desdeInputFechaHora } from "../fecha";
+import type { Tope } from "../tipos";
 import { eventoSchema } from "../validacion";
 
 /**
@@ -86,6 +87,72 @@ export async function cerrarVentas(): Promise<{ ok: boolean; error?: string }> {
 
 async function cambiarVenta(verbo: "abrir-ventas" | "cerrar-ventas") {
   const resultado = await enviarAdmin<unknown>(`/api/admin/evento/${verbo}`, {});
+
+  if (!resultado.ok) return { ok: false, error: resultado.error };
+
+  refresh();
+
+  return { ok: true };
+}
+
+export type EstadoTope = {
+  error?: string;
+  ok?: boolean;
+  valores?: Record<string, string>;
+};
+
+/**
+ * Guarda el corte de venta.
+ *
+ * A diferencia de `guardarEvento` no es un reemplazo silencioso: acá "vaciar
+ * el campo" y "sacar el corte" son dos cosas distintas, así que sacarlo tiene
+ * su propio botón (`sacarTope`) y este formulario siempre manda los dos
+ * campos con algo. La validación real —el margen tiene que cubrir al menos una
+ * compra entera, y no se puede tocar si el tope ya se alcanzó— la hace el
+ * backend; acá solo se frena lo obviamente vacío para no gastar un viaje.
+ */
+export async function guardarTope(
+  _previo: EstadoTope,
+  datos: FormData,
+): Promise<EstadoTope> {
+  const crudos = {
+    topeVendidas: String(datos.get("topeVendidas") ?? ""),
+    margen: String(datos.get("margen") ?? ""),
+  };
+
+  const topeVendidas = Number(crudos.topeVendidas);
+  const margen = Number(crudos.margen);
+
+  if (
+    !Number.isInteger(topeVendidas) ||
+    topeVendidas <= 0 ||
+    !Number.isInteger(margen) ||
+    margen <= 0
+  ) {
+    return {
+      error: "Completá los dos campos con números enteros mayores a cero.",
+      valores: crudos,
+    };
+  }
+
+  const resultado = await enviarAdmin<Tope>("/api/admin/evento/tope", {
+    topeVendidas,
+    margen,
+  });
+
+  if (!resultado.ok) return { error: resultado.error, valores: crudos };
+
+  refresh();
+
+  return { ok: true };
+}
+
+/** Saca el corte: la web vuelve a vender sin más límite que el interruptor general. */
+export async function sacarTope(): Promise<{ ok: boolean; error?: string }> {
+  const resultado = await enviarAdmin<Tope>("/api/admin/evento/tope", {
+    topeVendidas: null,
+    margen: null,
+  });
 
   if (!resultado.ok) return { ok: false, error: resultado.error };
 

@@ -65,6 +65,38 @@ export function hora(fecha: Date | null, siNoHay = "—") {
   return fecha ? soloHora.format(fecha) : siNoHay;
 }
 
+const claveDeDia = new Intl.DateTimeFormat("en-CA", {
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+  timeZone: ZONA,
+});
+
+const diaEscrito = new Intl.DateTimeFormat("es-AR", {
+  weekday: "long",
+  day: "numeric",
+  month: "long",
+  timeZone: ZONA,
+});
+
+/**
+ * `Date` → "2026-09-30", el dia en Buenos Aires.
+ *
+ * Agrupa las entradas por dia de venta y viaja en la URL de la pantalla. **Tiene
+ * que salir de la zona y no de `toISOString()`**: un pago de las 22:30 de un
+ * martes es 01:30 del miercoles en UTC, y caeria en el dia equivocado.
+ *
+ * `en-CA` da justo el orden ISO, que es el unico que ordena bien como texto.
+ */
+export function diaClave(fecha: Date) {
+  return claveDeDia.format(fecha);
+}
+
+/** "martes 30 de septiembre" — el encabezado de cada dia de venta. */
+export function diaLargo(fecha: Date) {
+  return diaEscrito.format(fecha);
+}
+
 /**
  * Centavos → los pesos que se tipean en el formulario del evento.
  *
