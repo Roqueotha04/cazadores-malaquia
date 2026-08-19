@@ -26,7 +26,14 @@ export type EstadoFormulario = {
   valores?: Record<string, string>;
 };
 
-const CAMPOS = ["nombre", "apellido", "dni", "email", "celular"] as const;
+const CAMPOS = [
+  "nombre",
+  "apellido",
+  "dni",
+  "email",
+  "confirmarEmail",
+  "celular",
+] as const;
 
 /**
  * El okey de datos personales, que sin tildar no deja seguir.
@@ -36,6 +43,13 @@ const CAMPOS = ["nombre", "apellido", "dni", "email", "celular"] as const;
  * su contrato no tiene. Va suelto, y el schema lo descarta solo al parsear.
  */
 const FALTA_CONSENTIMIENTO = "Marcá la casilla para poder emitir tu entrada";
+
+/**
+ * Igual que `confirmarEmail`: no entra en `crearOrdenSchema`, es del
+ * formulario nomás. Se compara normalizado como lo hace `emailSchema`, para
+ * no marcar error por mayúsculas o espacios que igual el backend ignora.
+ */
+const EMAILS_NO_COINCIDEN = "Los emails no coinciden";
 
 /**
  * Acción del formulario de compra.
@@ -77,19 +91,25 @@ export async function enviarCompra(
       .map(Number),
   });
 
-  // Los dos se juntan en una sola vuelta: si falta el okey y ademas hay un DNI
-  // mal, se marcan las dos cosas de una y no una atras de la otra.
+  // Los tres se juntan en una sola vuelta: si falta el okey, los emails no
+  // coinciden y ademas hay un DNI mal, se marcan las tres cosas de una y no
+  // una atras de la otra.
   const falta = crudos.consentimiento !== "on";
+  const noCoinciden =
+    crudos.email.trim().toLowerCase() !==
+    crudos.confirmarEmail.trim().toLowerCase();
 
-  if (!validacion.success || falta) {
+  if (!validacion.success || falta || noCoinciden) {
     const { fieldErrors, formErrors } = validacion.success
       ? { fieldErrors: {} as Record<string, string[]>, formErrors: [] }
       : z.flattenError(validacion.error);
 
     return {
-      errores: falta
-        ? { ...fieldErrors, consentimiento: [FALTA_CONSENTIMIENTO] }
-        : fieldErrors,
+      errores: {
+        ...fieldErrors,
+        ...(falta ? { consentimiento: [FALTA_CONSENTIMIENTO] } : {}),
+        ...(noCoinciden ? { confirmarEmail: [EMAILS_NO_COINCIDEN] } : {}),
+      },
       error: formErrors[0] ?? fieldErrors.asientoIds?.[0],
       valores: crudos,
     };

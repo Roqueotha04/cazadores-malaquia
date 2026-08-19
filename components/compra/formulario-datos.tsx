@@ -44,6 +44,13 @@ const CAMPOS = [
     ayuda: "Ahí te mandamos las entradas",
   },
   {
+    nombre: "confirmarEmail",
+    etiqueta: "Confirmar email",
+    tipo: "email",
+    autoComplete: "off",
+    sinPegar: true,
+  },
+  {
     nombre: "celular",
     etiqueta: "Celular",
     tipo: "tel",
@@ -158,6 +165,12 @@ export function FormularioDatos({
                 inputMode={campo.inputMode}
                 autoComplete={campo.autoComplete}
                 required
+                /* Sin esto se puede pegar el mismo email mal escrito dos
+                   veces y el campo pierde su sentido: tiene que salir de
+                   tipear. */
+                onPaste={
+                  campo.sinPegar ? (e) => e.preventDefault() : undefined
+                }
                 /* React 19 resetea el formulario cuando la action termina,
                    aunque haya devuelto errores. Los valores vuelven del estado
                    para que nadie tenga que reescribir todo por un dígito. */
