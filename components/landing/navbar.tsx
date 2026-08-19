@@ -21,10 +21,10 @@ export function Navbar() {
           className="flex shrink-0 items-center gap-3"
           aria-label="Cena de Cazadores y Tiradores, ir al inicio"
         >
-          {/* Alto y no `size-*`: el emblema es apaisado (2312x2087) y en una
-              caja cuadrada se achata. Y 56px no es capricho — es line-art de
-              trazo finisimo y abajo de eso los trazos caen por debajo del pixel
-              y el ciervo se deshace en una mancha gris. */}
+          {/* Alto fijo y no `size-*`: si el logo vuelve a cambiar de
+              proporciones (hoy es cuadrado, 1254x1254) no se achata. 56px no
+              es capricho — por debajo de eso el trazo fino se deshace en una
+              mancha gris. */}
           <Image src={logo} alt="" className="h-14 w-auto" priority />
           <span className="hidden leading-tight sm:block">
             <span className="block whitespace-nowrap font-display text-sm text-ink lg:text-base">
