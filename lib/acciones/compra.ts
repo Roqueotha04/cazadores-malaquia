@@ -29,6 +29,15 @@ export type EstadoFormulario = {
 const CAMPOS = ["nombre", "apellido", "dni", "email", "celular"] as const;
 
 /**
+ * El okey de datos personales, que sin tildar no deja seguir.
+ *
+ * No entra en `crearOrdenSchema` a proposito: es del formulario, no del pedido.
+ * Metido ahi viajaria adentro de `usuario` y el backend recibiria un campo que
+ * su contrato no tiene. Va suelto, y el schema lo descarta solo al parsear.
+ */
+const FALTA_CONSENTIMIENTO = "Marcá la casilla para poder emitir tu entrada";
+
+/**
  * Acción del formulario de compra.
  *
  * Crea la orden —que es lo que reserva las butacas— y lleva a la pantalla de
@@ -47,9 +56,14 @@ export async function enviarCompra(
   // Los valores tal como los escribió la persona. React 19 resetea el
   // formulario cuando la action termina, aunque haya devuelto errores: si no
   // vuelven acá, quien se equivoca en un dígito del DNI reescribe todo.
-  const crudos = Object.fromEntries(
-    CAMPOS.map((campo) => [campo, String(datos.get(campo) ?? "")]),
-  );
+  const crudos: Record<string, string> = {
+    ...Object.fromEntries(
+      CAMPOS.map((campo) => [campo, String(datos.get(campo) ?? "")]),
+    ),
+    // Vuelve como los demas para que no se destilde al volver con un error en
+    // otro campo: quien ya dio el okey no lo tiene que dar dos veces.
+    consentimiento: datos.get("consentimiento") === "on" ? "on" : "",
+  };
 
   if (!evento.ventasAbiertas) {
     return { error: "La venta de entradas no está abierta.", valores: crudos };
@@ -63,10 +77,19 @@ export async function enviarCompra(
       .map(Number),
   });
 
-  if (!validacion.success) {
-    const { fieldErrors, formErrors } = z.flattenError(validacion.error);
+  // Los dos se juntan en una sola vuelta: si falta el okey y ademas hay un DNI
+  // mal, se marcan las dos cosas de una y no una atras de la otra.
+  const falta = crudos.consentimiento !== "on";
+
+  if (!validacion.success || falta) {
+    const { fieldErrors, formErrors } = validacion.success
+      ? { fieldErrors: {} as Record<string, string[]>, formErrors: [] }
+      : z.flattenError(validacion.error);
+
     return {
-      errores: fieldErrors,
+      errores: falta
+        ? { ...fieldErrors, consentimiento: [FALTA_CONSENTIMIENTO] }
+        : fieldErrors,
       error: formErrors[0] ?? fieldErrors.asientoIds?.[0],
       valores: crudos,
     };

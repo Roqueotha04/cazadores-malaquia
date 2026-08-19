@@ -77,6 +77,8 @@ export function FormularioDatos({
   // abierta: se escribe recién al llegar a la reserva.
   const ultima = useSyncExternalStore(noCambia, tokenGuardado, () => null);
 
+  const errorConsentimiento = estado.errores?.consentimiento?.[0];
+
   // El error general vive arriba de todo: si la persona estaba en el último
   // campo, sin esto no lo ve nunca.
   useEffect(() => {
@@ -180,17 +182,42 @@ export function FormularioDatos({
         })}
       </div>
 
-      <label className="mt-7 flex cursor-pointer items-start gap-3 text-sm text-ink-soft">
-        <input
-          type="checkbox"
-          required
-          className="mt-0.5 size-5 shrink-0 accent-brass"
-        />
-        <span>
-          Usamos tus datos solamente para emitir la entrada y controlar el
-          ingreso al salón. No los compartimos con nadie.
-        </span>
-      </label>
+      {/* El `required` no alcanza: el formulario es `noValidate` —los mensajes
+          son nuestros, no las burbujas del navegador— asi que quien decide es
+          la accion. Queda igual porque es lo que lo anuncia como obligatorio a
+          un lector de pantalla. */}
+      <div className="mt-7">
+        <label className="flex cursor-pointer items-start gap-3 text-sm text-ink-soft">
+          <input
+            type="checkbox"
+            name="consentimiento"
+            required
+            defaultChecked={estado.valores?.consentimiento === "on"}
+            aria-invalid={!!errorConsentimiento}
+            aria-describedby={
+              errorConsentimiento ? "consentimiento-error" : undefined
+            }
+            className={`mt-0.5 size-5 shrink-0 accent-brass ${
+              errorConsentimiento
+                ? "outline outline-2 outline-offset-2 outline-error"
+                : ""
+            }`}
+          />
+          <span>
+            Usamos tus datos solamente para emitir la entrada y controlar el
+            ingreso al salón. No los compartimos con nadie.
+          </span>
+        </label>
+
+        {errorConsentimiento && (
+          <p
+            id="consentimiento-error"
+            className="mt-2 text-sm font-medium text-error"
+          >
+            {errorConsentimiento}
+          </p>
+        )}
+      </div>
 
       <Boton
         type="submit"

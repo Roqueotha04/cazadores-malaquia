@@ -1,13 +1,6 @@
 import Link from "next/link";
 import { obtenerResumen } from "@/lib/admin/consultas";
-import {
-  ESTADO_ORDEN,
-  ESTADOS_ORDEN,
-  MEDIO,
-  MEDIOS,
-  type MedioPago,
-} from "@/lib/admin/tipos";
-import type { EstadoOrden } from "@/lib/tipos";
+import { MEDIO, MEDIOS, type MedioPago } from "@/lib/admin/tipos";
 import { precio } from "@/lib/formato";
 import { Refresco } from "@/components/admin/ui/refresco";
 import {
@@ -30,26 +23,18 @@ export default async function TableroPage() {
   const { butacas, recaudacion, incidenciasPendientes, erroresPendientes } =
     await obtenerResumen();
 
-  // El backend manda siempre los tres medios y los cinco estados, aunque esten
-  // en cero. Igual se ordenan acá: la lista se lee siempre en el mismo orden, y
-  // si algun dia llegara incompleta no desaparecen renglones de la pantalla.
+  // El backend manda siempre los tres medios, aunque esten en cero. Igual se
+  // ordenan acá: la lista se lee siempre en el mismo orden, y si algun dia
+  // llegara incompleta no desaparecen renglones de la pantalla.
   const porMedio = MEDIOS.map((medio) => ({
     medio,
     dato: recaudacion.porMedio.find((m) => m.medio === medio),
-  }));
-
-  const porEstado = ESTADOS_ORDEN.map((estado) => ({
-    estado,
-    cantidad:
-      recaudacion.ordenesPorEstado.find((o) => o.estado === estado)?.cantidad ??
-      0,
   }));
 
   const maximoMedio = Math.max(
     1,
     ...porMedio.map((m) => m.dato?.totalCentavos ?? 0),
   );
-  const maximoEstado = Math.max(1, ...porEstado.map((e) => e.cantidad));
 
   return (
     <>
@@ -191,26 +176,6 @@ export default async function TableroPage() {
           ))}
         </div>
       </Panel>
-
-      <Panel titulo="Órdenes por estado">
-        <div className="divide-y divide-line">
-          {porEstado.map(({ estado, cantidad }) => (
-            <FilaBarra
-              key={estado}
-              rotulo={ESTADO_ORDEN[estado]}
-              valor={cantidad}
-              maximo={maximoEstado}
-              cifra={String(cantidad)}
-              nota={LEYENDA_ESTADO[estado]}
-            />
-          ))}
-        </div>
-        <p className="border-t border-line px-5 py-3.5 text-sm text-ink-faint">
-          <Link href="/admin/ordenes" className="subrayado-vivo">
-            Ver las órdenes una por una
-          </Link>
-        </p>
-      </Panel>
     </>
   );
 }
@@ -236,11 +201,3 @@ function leyendaMedio(
 
   return `${base} · ${precio(dato.netoCentavos)} netos`;
 }
-
-const LEYENDA_ESTADO: Record<EstadoOrden, string> = {
-  ACTIVA: "Con butacas reservadas, esperando el pago",
-  PAGADA: "Con entradas emitidas",
-  EXPIRADA: "Se acabó el tiempo y soltaron las butacas",
-  CANCELADA: "El comprador volvió atrás antes de pagar",
-  ANULADA: "El equipo la dio de baja después de cobrada. El reintegro va a mano",
-};
