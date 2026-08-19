@@ -76,13 +76,14 @@ public/      hero.webp, sobre-nosotros.webp, equipo.webp, extra.webp, logo.png
              logo-estudio-ve). El icono de la pestaña son app/icon.png y
              app/apple-icon.png, generados a mano desde public/logo.png.
              Los originales sin comprimir viven en design/ (gitignored).
-             ⚠️ `logo.png` es line-art apaisado (2312×2087) de trazo finísimo:
-             nunca en caja cuadrada (`size-*`) y nunca abajo de 56px de alto —
-             los trazos caen por debajo del pixel y queda una mancha gris. Por
-             eso los íconos no son un `resize` a secas: se engordan los trazos
-             componiendo la imagen sobre sí misma corrida un pixel en las ocho
-             direcciones, y recién ahí se achican a 96 y 180. Si se rehacen sin
-             ese paso, a 32px el ciervo desaparece.
+             `logo.png` hoy es cuadrado (1254×1254) y macizo —70% de pixeles
+             opacos—, así que los íconos salen de un `resize` a secas: se
+             recorta el aire de abajo, se achica a 86 y 160, y se centra con
+             ~5,5% de padding en lienzos de 96 y 180. El `apple-icon` va
+             aplanado sobre `#151c15` (el `themeColor`) porque Apple no respeta
+             la transparencia; el `icon` la conserva. El truco de engordar los
+             trazos en ocho direcciones era del logo apaisado anterior, de
+             line-art finísimo: ya no hace falta.
 .mcp.json    servidor MCP de Supabase (compartido; los permisos no)
 
 Docs en la raíz: README.md · PRODUCT.md · LOGICA-BACKEND.md · AGENTS.md

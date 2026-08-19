@@ -238,6 +238,15 @@ export type EntradaVendida = {
   ordenToken: string;
   dni: string;
   comprador: string;
+  /**
+   * A donde salio el PDF. **No viene con la lista**: se pide el detalle de la
+   * compra, que es el unico que trae al comprador entero. `null` si ese pedido
+   * no llego —el resto de la fila vale igual y se muestra sin el mail.
+   *
+   * Es la direccion de hoy, no la del envio: si alguien la corrigio despues de
+   * emitidas las entradas, esta es la corregida.
+   */
+  email: string | null;
   origen: OrigenOrden;
   pagadoEl: Date | null;
 };

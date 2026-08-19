@@ -26,7 +26,7 @@ export function BarraFlujo() {
         </Link>
 
         <p className="hidden text-xs text-ink-faint sm:block">
-          Compra segura · Bonifacio Malaquía
+          Compra segura · Cena de Cazadores y Tiradores
         </p>
       </div>
     </header>

@@ -71,6 +71,13 @@ function Fila({ entrada, q }: { entrada: EntradaVendida; q?: string }) {
         <span className="block text-xs text-ink-faint tabular">
           DNI {entrada.dni}
         </span>
+        {/* A donde salio el PDF. Si el detalle de la compra no llego no se
+            escribe nada: una fila sin mail se lee peor con un guion al lado. */}
+        {entrada.email && (
+          <span className="block text-xs break-all text-ink-faint">
+            {entrada.email}
+          </span>
+        )}
       </Celda>
 
       <Celda>

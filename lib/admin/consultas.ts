@@ -29,7 +29,7 @@ import type {
   VentaManual,
   VentaManualJson,
 } from "./tipos";
-import type { Entrada, EstadoOrden } from "@/lib/tipos";
+import type { Entrada, EstadoOrden, Orden } from "@/lib/tipos";
 
 /**
  * Lecturas del panel. Las pantallas solo llaman a estas funciones.
@@ -218,10 +218,13 @@ export async function obtenerDiasDeVenta(q?: string): Promise<{
 /**
  * Las entradas emitidas de un dia, una por butaca.
  *
- * Un pedido por orden, todos en paralelo: `/api/ordenes/{token}/entradas` es el
- * unico lugar donde estan los codigos, y sin codigo no hay ni "cambiar butaca"
- * ni "anular". La pantalla llama a esto para todos sus dias de una: son cien
- * pedidos como techo —el tope de la lista de ordenes— y salen juntos.
+ * Dos pedidos por orden, todos en paralelo. `/api/ordenes/{token}/entradas` es
+ * el unico lugar donde estan los codigos, y sin codigo no hay ni "cambiar
+ * butaca" ni "anular"; `/api/ordenes/{token}` es el unico que trae al comprador
+ * entero, y de ahi sale el mail al que fue el PDF —la lista de ordenes del
+ * panel no lo incluye—. La pantalla llama a esto para todos sus dias de una:
+ * son doscientos pedidos como techo —el tope de la lista de ordenes es cien— y
+ * salen juntos.
  *
  * Es el endpoint publico, sin token de admin, y es a proposito: el contrato dice
  * que el detalle de una compra no tiene version admin.
@@ -229,10 +232,8 @@ export async function obtenerDiasDeVenta(q?: string): Promise<{
  * **Lo de `anulada` es deduccion, no dato.** Ese listado no trae `anuladaEl`,
  * pero anular devuelve la butaca a la venta y la saca de las que la orden
  * conserva. Entonces: si el dia trae mas entradas que butacas conservadas, esas
- * de mas estan anuladas, y para saber *cuales* hay que pedir el detalle de la
- * orden — que es el unico que lista las butacas que le quedan. Se pide solo para
- * las ordenes donde los numeros no cierran, que son las pocas que tienen alguna
- * anulada; en la enorme mayoria no sale ese segundo viaje.
+ * de mas estan anuladas, y para saber *cuales* se miran las butacas que la orden
+ * conserva, que las lista el mismo detalle que ya se pidio por el mail.
  *
  * Si el cruce no cierra —porque el backend ya filtra las anuladas de ese listado,
  * o porque cambio lo que devuelve— **no se marca ninguna**. Tachar la entrada
@@ -243,8 +244,12 @@ export async function obtenerEntradasDelDia(
 ): Promise<EntradaVendida[]> {
   const porOrden = await Promise.all(
     ordenes.map(async (orden) => {
-      const entradas = await obtenerEntradasPorToken(orden.token);
-      const anuladas = await deducirAnuladas(orden, entradas);
+      const [entradas, detalle] = await Promise.all([
+        obtenerEntradasPorToken(orden.token),
+        obtenerOrdenPorToken(orden.token),
+      ]);
+
+      const anuladas = deducirAnuladas(orden, entradas, detalle);
 
       return entradas.map((entrada) => ({
         ...entrada,
@@ -252,6 +257,7 @@ export async function obtenerEntradasDelDia(
         ordenToken: orden.token,
         dni: orden.dni,
         comprador: orden.comprador,
+        email: detalle?.usuario.email ?? null,
         origen: orden.origen,
         pagadoEl: orden.pagadoEl,
       }));
@@ -264,15 +270,14 @@ export async function obtenerEntradasDelDia(
 }
 
 /** Los numeros de butaca anulados de una orden, o vacio si el cruce no cierra. */
-async function deducirAnuladas(
+function deducirAnuladas(
   orden: OrdenAdmin,
   entradas: Entrada[],
-): Promise<Set<number>> {
+  detalle: Orden | null,
+): Set<number> {
   const sobran = entradas.length - orden.butacas;
 
   if (sobran <= 0) return new Set();
-
-  const detalle = await obtenerOrdenPorToken(orden.token);
 
   if (!detalle) return new Set();
 
